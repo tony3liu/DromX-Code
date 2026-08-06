@@ -8,7 +8,76 @@
   <a href="https://www.npmjs.com/package/@earendil-works/pi-coding-agent"><img alt="npm" src="https://img.shields.io/npm/v/@earendil-works/pi-coding-agent?style=flat-square" /></a>
 </p>
 
+# DromX-Code
+
+A fork of [pi-mono](https://github.com/earendil-works/pi-mono) (the Pi coding agent) with a **loopx-powered autonomous mode**: give it a goal, walk away, and pi runs to completion — tracked by a durable goal / todo / gate / evidence state kernel across turns and sessions.
+
+## One-click setup
+
+```bash
+git clone https://github.com/tony3liu/DromX-Code.git
+cd DromX-Code
+bash scripts/setup-pi-loopx.sh
+```
+
+The script installs the full stack — [loopx](https://github.com/huangruiteng/loopx), 6 community extensions, the built-in safety/plan examples, the `pi-loopx` extension (auto-continue + autonomous-start), `~/.pi/agent/settings.json`, and the `pi` / `pi-auto` aliases — then verifies pi loads everything cleanly. It is idempotent; re-run any time.
+
+**Prereqs** (the script checks + instructs, it does **not** install these for you):
+
+- node ≥ 22.19  (`nvm install 22` / `n 22` / `brew install node@22`)
+- python ≥ 3.11  — only needed if loopx isn't installed yet (`pyenv install 3.12` / `conda create -n py312 python=3.12` / `brew install python@3.12`)
+- a provider API key (e.g. DeepSeek) — the script prompts for it, or use `/login` inside pi
+
+## Usage
+
+```bash
+cd ~/your-project
+pi-auto            # = LOOPX_MAX_TURNS=100 PI_OFFLINE=1 pi --auto-loopx
+```
+
+Then type your objective and press enter:
+
+```
+用 loopx_start_goal 建目标: <your objective here>. 然后驱动循环到完成或遇到需要我的 gate.
+```
+
+Walk away. The footer shows `LoopX: auto-loop N/100`; pi auto-loops until the goal is done, a human gate blocks, or the turn cap is hit. For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by default**.
+
+## What this fork adds on top of pi-mono
+
+- **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:
+  - **auto-continue driver** — on `turn_end`, asks loopx `quota should-run`; if true and under the cap, injects the next turn via `pi.sendUserMessage()`. Opt-in: `pi --auto-loopx` or `LOOPX_AUTO_CONTINUE=1`. Cap: `LOOPX_MAX_TURNS` (default 25). Stops on a loopx gate/quota or the cap.
+  - **autonomous-start** — `loopx_start_goal` defaults to autonomous (auto-accept onboarding, begin advancement, no heartbeat), so no onboarding user-gate blocks the auto-loop.
+- **`scripts/setup-pi-loopx.sh`** — the one-click installer above.
+- Globally loaded extensions (via `~/.pi/agent/settings.json`): `pi-mcp-adapter`, `pi-subagents`, `pi-hashline-edit`, `pi-messenger`, `pi-intercom`, plus `permission-gate` and `plan-mode` from the built-in examples. (`pi-hashline-edit` replaces the built-in read/edit with hash-anchored editing.)
+
+## Architecture
+
+```
+pi (this fork, run from source via pi-test.sh)
+ └ 8 globally-loaded extensions
+     loopx ◄── pi-loopx extension: 6 tools + auto-continue driver + autonomous-start
+     pi-mcp-adapter / pi-subagents / pi-hashline-edit / pi-messenger / pi-intercom
+     permission-gate / plan-mode
+              │  turn_end → quota should-run → sendUserMessage  (the auto-loop)
+              ▼
+        loopx state kernel  (cross-session: goals / todos / gates / evidence / quota)
+```
+
+## Updating
+
+```bash
+git pull && npm run build       # refresh the pi source
+bash scripts/setup-pi-loopx.sh  # re-run to pick up extension changes (idempotent)
+```
+
+> The `pi-loopx` extension path in `~/.pi/agent/settings.json` points into this repo (`packages/coding-agent/examples/extensions/loopx/index.ts`). If you move/rename the repo, re-run the setup script to update the path.
+
+---
+
 > New issues and PRs from new contributors are auto-closed by default. Maintainers review auto-closed issues daily. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+> Below is the upstream **pi-mono** README, kept for reference.
 
 # Pi Agent Harness
 
