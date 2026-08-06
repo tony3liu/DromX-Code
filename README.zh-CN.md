@@ -44,6 +44,36 @@ pi
 
 > Thinking（CoT）默认折叠成 `Thinking...` 标签，保持输出清爽；按 `ctrl+t` 展开 / 折叠。由 settings 的 `hideThinkingBlock: true` 设置。
 
+## 基本操作
+
+日常 pi 用法速查（完整见 `pi --help` 和 [usage 文档](packages/coding-agent/docs/usage.md)）。
+
+**启动 / 恢复：**
+- `pi` 新会话 · `pi -c` 接上次 · `pi -r` 从列表选一个恢复
+- 会话按项目存，先 `cd` 进项目。
+
+**会话内：**
+- 输消息 + `Enter` 对话；`Shift+Enter` 换行。
+- `!命令` —— 跑 shell 命令，输出发给模型。`!!命令` —— 静默跑（输出不发）。
+- `/` 弹出斜杠命令补全。常用：
+  - `/login` `/logout` —— 管 provider 凭证（OAuth 或 API key）
+  - `/model` 切模型 · `/scoped-models` 选 `Ctrl+P` 循环的模型
+  - `/resume` `/new` `/tree` `/fork` —— 恢复 / 新建 / 导航 / 分支会话
+  - `/changelog` 版本历史 · `/auto-loop`（本 fork）触发自治模式
+
+**快捷键：**
+
+| 键 | 作用 |
+|-----|------|
+| `Esc` | 中断 agent |
+| `Ctrl+C` / `Ctrl+D` | 清空输入 / 退出（输入为空时） |
+| `Ctrl+L` / `Ctrl+P` / `Shift+Tab` | 模型选择 / 循环模型 / 切 thinking 级别 |
+| `Ctrl+T` | 折叠 / 展开 thinking |
+| `Ctrl+O` | 折叠 / 展开工具输出 |
+| `Ctrl+X` | 复制上一条回复 |
+| `Ctrl+G` | 外部编辑器（`$EDITOR` / nano） |
+| `Shift+Enter` | 换行（多行输入） |
+
 ## 这个 fork 在 pi-mono 之上加了什么
 
 - **`packages/coding-agent/examples/extensions/loopx/`** —— `pi-loopx` 扩展。六个封装 loopx CLI 的工具（`loopx_status`、`loopx_start_goal`、`loopx_todo_add`、`loopx_todo_update`、`loopx_quota_should_run`、`loopx_diagnose`），外加：

@@ -54,6 +54,36 @@ For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by def
 
 > Thinking (CoT) is collapsed by default (shows a `Thinking...` label) to keep output readable; press `ctrl+t` to expand/collapse. Set by `hideThinkingBlock: true` in settings.
 
+## Basic operations
+
+Quick reference for everyday pi use (full set in `pi --help` and the [usage docs](packages/coding-agent/docs/usage.md)).
+
+**Start / resume:**
+- `pi` — new session · `pi -c` — continue the last · `pi -r` — pick a session to resume
+- Sessions are per-project: `cd` into the project first.
+
+**In a session:**
+- Type a message + `Enter` to chat; `Shift+Enter` for a newline.
+- `!command` — run a shell command and send its output to the model. `!!command` — run it silently (output not sent).
+- `/` opens slash-command completion. Common ones:
+  - `/login` `/logout` — manage provider credentials (OAuth or API key)
+  - `/model` — switch models · `/scoped-models` — choose models for `Ctrl+P` cycling
+  - `/resume` `/new` `/tree` `/fork` — resume, start, navigate, or branch sessions
+  - `/changelog` — version history · `/auto-loop` — (this fork) trigger autonomous mode
+
+**Keybindings:**
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Interrupt the agent |
+| `Ctrl+C` / `Ctrl+D` | Clear input / exit (when input empty) |
+| `Ctrl+L` / `Ctrl+P` / `Shift+Tab` | Model selector / cycle models / cycle thinking level |
+| `Ctrl+T` | Collapse / expand thinking blocks |
+| `Ctrl+O` | Collapse / expand tool output |
+| `Ctrl+X` | Copy last assistant response |
+| `Ctrl+G` | Open external editor (`$EDITOR` / nano) |
+| `Shift+Enter` | Newline (multi-line input) |
+
 ## What this fork adds on top of pi-mono
 
 - **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:
