@@ -137,6 +137,7 @@ let s={}; try{s=JSON.parse(fs.readFileSync(p,"utf8"))}catch{}
 s.extensions=Array.isArray(s.extensions)?s.extensions.filter(x=>x!==ext):[];
 if(!s.extensions.includes(ext)) s.extensions.push(ext);
 if(Array.isArray(s.packages)) s.packages=[...new Set(s.packages)]; // dedup
+if(s.hideThinkingBlock===undefined) s.hideThinkingBlock=true; // collapse CoT by default; ctrl+t to expand
 fs.writeFileSync(p, JSON.stringify(s,null,2)+"\n");
 console.log("extensions:", s.extensions.join(", "));
 console.log("packages:", (s.packages||[]).length, "entries");

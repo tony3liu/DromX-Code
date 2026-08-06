@@ -52,6 +52,8 @@ Inside pi, trigger auto-loop with a slash command:
 
 For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by default**.
 
+> Thinking (CoT) is collapsed by default (shows a `Thinking...` label) to keep output readable; press `ctrl+t` to expand/collapse. Set by `hideThinkingBlock: true` in settings.
+
 ## What this fork adds on top of pi-mono
 
 - **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:

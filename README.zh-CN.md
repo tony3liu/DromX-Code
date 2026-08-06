@@ -42,6 +42,8 @@ pi
 
 日常（非自治）使用直接 `pi` —— auto-loop **默认关闭**。
 
+> Thinking（CoT）默认折叠成 `Thinking...` 标签，保持输出清爽；按 `ctrl+t` 展开 / 折叠。由 settings 的 `hideThinkingBlock: true` 设置。
+
 ## 这个 fork 在 pi-mono 之上加了什么
 
 - **`packages/coding-agent/examples/extensions/loopx/`** —— `pi-loopx` 扩展。六个封装 loopx CLI 的工具（`loopx_status`、`loopx_start_goal`、`loopx_todo_add`、`loopx_todo_update`、`loopx_quota_should_run`、`loopx_diagnose`），外加：
