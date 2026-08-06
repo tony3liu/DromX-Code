@@ -16,13 +16,14 @@
  *   - loopx_diagnose       : compact evidence packet for replan / handoff
  *
  * Auto-continue driver — trigger it INSIDE pi with `/auto-loop`:
- *   `/auto-loop`            toggle auto-loop on/off for this session
- *   `/auto-loop <objective>` enable auto-loop + kick off a loopx goal + drive to completion
+ *   `/auto-loop [--max-turns N] <objective>`  set the turn cap + enable + start a loopx goal + drive to completion
+ *   `/auto-loop [--max-turns N]`              set the cap + toggle on (no goal)
+ *   `/auto-loop`                              toggle on/off (uses current cap)
  *   (also still triggerable at launch via `pi --auto-loopx` or `LOOPX_AUTO_CONTINUE=1`)
  *   On `turn_end`, if enabled + idle, ask loopx `quota should-run`; if true and under the
  *   turn cap, inject a continuation message via pi.sendUserMessage(). Stop conditions
  *   delegate to loopx (quota/gate) + a hard turn cap backstop.
- *   Cap: `LOOPX_MAX_TURNS` (default 25).
+ *   Cap default: `LOOPX_MAX_TURNS` env (25); override at runtime with `/auto-loop --max-turns N`.
  *
  * Requires: `loopx` on PATH (install: pip install git+https://github.com/huangruiteng/loopx)
  */
@@ -121,6 +122,26 @@ function quotaShouldRun(cwd: string, goalId: string): { shouldRun: boolean; deci
 	return { shouldRun: m ? m[1].toLowerCase() === "true" : false, decision: "", reason: r.stdout.slice(0, 200) };
 }
 
+/** Parse `--max-turns N` / `--max-turns=N` / `-m N` out of an arg string. Returns {maxTurns?, rest}. */
+function parseMaxTurns(raw: string): { maxTurns: number | undefined; rest: string } {
+	let maxTurns: number | undefined;
+	let rest = raw;
+	// --max-turns=N  or  --max-turns N  /  -m N
+	let m = rest.match(/(^|\s)--max-turns=(\d+)/);
+	if (m) {
+		maxTurns = Number(m[2]);
+		rest = rest.replace(m[0], "").trim();
+	} else {
+		m = rest.match(/(^|\s)(--max-turns|-m)\s+(\d+)/);
+		if (m) {
+			maxTurns = Number(m[3]);
+			rest = rest.replace(m[0], "").trim();
+		}
+	}
+	if (maxTurns !== undefined && (!Number.isFinite(maxTurns) || maxTurns <= 0)) maxTurns = undefined;
+	return { maxTurns, rest };
+}
+
 /** True if auto-loop is enabled at launch (flag/env). The session toggle (autoLoopOn) is checked separately. */
 function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
 	try {
@@ -139,7 +160,7 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	let activeGoalId: string | undefined;
 	let autoTurnCount = 0;
 	let autoLoopOn = false; // toggled by /auto-loop inside pi
-	const maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25);
+	let maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25); // mutable: /auto-loop --max-turns can override
 
 	pi.registerFlag("auto-loopx", {
 		description: "Enable loopx auto-continue at launch: auto-tick the loopx loop across turns until the goal is done, a human gate blocks, or the turn cap is hit. (Inside a session, use /auto-loop instead.)",
@@ -148,28 +169,36 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	});
 
 	// `/auto-loop` — trigger auto-loop mode from inside pi (no launch flag needed).
+	//   /auto-loop --max-turns 50 <objective>   set cap=50 + enable + kickoff goal
+	//   /auto-loop --max-turns 50               set cap=50 + enable (no goal)
+	//   /auto-loop <objective>                  enable + kickoff (current cap)
+	//   /auto-loop                              toggle on/off (current cap)
 	pi.registerCommand("auto-loop", {
 		description:
-			"Toggle loopx auto-loop (auto-continue across turns). `/auto-loop <objective>`: enable + start a loopx goal and drive it to completion. `/auto-loop` (no args): toggle on/off.",
+			"Trigger loopx auto-loop. `/auto-loop [--max-turns N] <objective>`: set the turn cap + enable + start a loopx goal + drive to completion. `/auto-loop [--max-turns N]`: set cap + enable. `/auto-loop`: toggle on/off. Cap defaults to 25 (or LOOPX_MAX_TURNS env).",
 		handler: async (args, ctx) => {
-			const objective = (typeof args === "string" ? args : "").trim();
+			const raw = (typeof args === "string" ? args : "").trim();
+			const { maxTurns, rest } = parseMaxTurns(raw);
+			if (maxTurns !== undefined) maxAutoTurns = maxTurns;
+			const objective = rest;
+
 			if (objective) {
 				// enable + kick off the goal in one shot
 				autoLoopOn = true;
 				autoTurnCount = 0;
 				ctx.ui.setStatus("loopx", `LoopX: auto-loop ON (cap ${maxAutoTurns})`);
-				ctx.ui.notify(`auto-loop ON — kicking off goal: ${objective.slice(0, 80)}`, "info");
+				ctx.ui.notify(`auto-loop ON (cap ${maxAutoTurns}) — kicking off: ${objective.slice(0, 80)}`, "info");
 				pi.sendUserMessage(
 					`用 loopx_start_goal 建目标: ${objective}. 然后驱动循环到完成或遇到需要我决策的 gate（用 loopx_status 定位、loopx_todo_add 拆步、做完用 loopx_todo_update 标 done 附证据、loopx_quota_should_run 查配额）.`,
 				);
 			} else {
-				// toggle
+				// no objective — toggle (and apply the new cap if given)
 				autoLoopOn = !autoLoopOn;
 				autoTurnCount = 0;
 				ctx.ui.setStatus("loopx", autoLoopOn ? `LoopX: auto-loop ON (cap ${maxAutoTurns})` : "LoopX: auto-loop OFF");
 				ctx.ui.notify(
 					autoLoopOn
-						? `auto-loop ON — will auto-continue on each turn_end (cap ${maxAutoTurns}). Give a goal or call loopx_status to start.`
+						? `auto-loop ON (cap ${maxAutoTurns}) — will auto-continue each turn_end. Give a goal or call loopx_status.`
 						: "auto-loop OFF",
 					"info",
 				);
@@ -330,9 +359,9 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	// launch flag/env) and loopx says the next turn should run, inject a
 	// continuation message. Stop conditions:
 	//   - disabled (default) -> normal pi behavior
-	//   - no connected loopx goal -> do nothing
+	//   - no connected loopx goal -> do nothing (nudge once)
 	//   - loopx quota should_run=false (gate/quota) -> stop + notify
-	//   - turn cap hit (LOOPX_MAX_TURNS) -> stop + notify
+	//   - turn cap hit (LOOPX_MAX_TURNS or /auto-loop --max-turns) -> stop + notify
 	pi.on("turn_end", async (_event, ctx) => {
 		try {
 			// enabled if the session /auto-loop toggle is on, OR launched with the flag/env
@@ -357,7 +386,7 @@ export default function loopxExtension(pi: ExtensionAPI) {
 			}
 
 			if (autoTurnCount >= maxAutoTurns) {
-				ctx.ui.notify(`LoopX auto-loop: hit turn cap (${maxAutoTurns}). Stopping. Raise LOOPX_MAX_TURNS or continue manually.`, "warning");
+				ctx.ui.notify(`LoopX auto-loop: hit turn cap (${maxAutoTurns}). Stopping. Use /auto-loop --max-turns N to raise, or continue manually.`, "warning");
 				return;
 			}
 
@@ -382,6 +411,8 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	pi.on("session_start", (_event, ctx) => {
 		autoTurnCount = 0;
 		autoLoopOn = false; // fresh session: don't inherit a stale toggle
+		// re-read env cap for the new session (a /auto-loop --max-turns can still override mid-session)
+		maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25);
 		try {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const connected = existsSync(registryPath(cwd));
