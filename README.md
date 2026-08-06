@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://pi.dev">
-    <img alt="pi logo" src="https://pi.dev/logo-auto.svg" width="128">
+  <a href="https://github.com/tony3liu/DromX-Code">
+    <img alt="DromX logo" src="docs/images/dromx-logo.svg" width="200">
   </a>
 </p>
 <p align="center">
@@ -12,17 +12,15 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-A fork of [pi-mono](https://github.com/earendil-works/pi-mono) (the Pi coding agent) with a **loopx-powered autonomous mode**: give it a goal, walk away, and pi runs to completion — tracked by a durable goal / todo / gate / evidence state kernel across turns and sessions.
+DromX-Code is an improved version of [pi-mono](https://github.com/earendil-works/pi-mono), with a **loopx-powered autonomous mode**: give it a goal, walk away, and dromx runs to completion — tracked by a durable goal / todo / gate / evidence state kernel across turns and sessions.
 
 ## One-click setup
 
 ```bash
 git clone https://github.com/tony3liu/DromX-Code.git
 cd DromX-Code
-bash scripts/setup-pi-loopx.sh
+bash scripts/setup-dromx.sh
 ```
-
-The script installs the full stack — [loopx](https://github.com/huangruiteng/loopx), 6 community extensions, the built-in safety/plan examples, the `pi-loopx` extension (auto-continue + autonomous-start), `~/.pi/agent/settings.json`, and the `pi` / `pi-auto` aliases — then verifies pi loads everything cleanly. It is idempotent; re-run any time.
 
 **Prereqs** (the script checks + instructs, it does **not** install these for you):
 
@@ -34,10 +32,10 @@ The script installs the full stack — [loopx](https://github.com/huangruiteng/l
 
 ```bash
 cd ~/your-project
-pi
+dromx          # `pi` is an alias to the same binary; both work
 ```
 
-Inside pi, trigger auto-loop with a slash command:
+Inside dromx, trigger auto-loop with a slash command:
 
 ```
 /auto-loop 给 app.py 加 docstring 并验证能跑
@@ -50,16 +48,16 @@ Inside pi, trigger auto-loop with a slash command:
 - Launch-time flag still works: `pi --auto-loopx` (or the `pi-auto` alias = `LOOPX_MAX_TURNS=100 PI_OFFLINE=1 pi --auto-loopx`).
 - Cap: `/auto-loop --max-turns 50 <objective>` sets it inline at run time, or `LOOPX_MAX_TURNS=50` env (default 25). No restart needed for the inline form.
 
-For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by default**.
+For normal (non-autonomous) use, just run `dromx` (or `pi`) — the auto-loop is **off by default**.
 
 > Thinking (CoT) is collapsed by default (shows a `Thinking...` label) to keep output readable; press `ctrl+t` to expand/collapse. Set by `hideThinkingBlock: true` in settings.
 
 ## Basic operations
 
-Quick reference for everyday pi use (full set in `pi --help` and the [usage docs](packages/coding-agent/docs/usage.md)).
+Quick reference for everyday dromx use (full set in `dromx --help` and the [usage docs](packages/coding-agent/docs/usage.md)).
 
 **Start / resume:**
-- `pi` — new session · `pi -c` — continue the last · `pi -r` — pick a session to resume
+- `dromx` — new session · `dromx -c` — continue the last · `dromx -r` — pick a session to resume
 - Sessions are per-project: `cd` into the project first.
 
 **In a session:**
@@ -84,35 +82,29 @@ Quick reference for everyday pi use (full set in `pi --help` and the [usage docs
 | `Ctrl+G` | Open external editor (`$EDITOR` / nano) |
 | `Shift+Enter` | Newline (multi-line input) |
 
-## What this fork adds on top of pi-mono
+## Changes dromx makes on top of pi-mono
 
 - **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:
   - **auto-continue driver** — on `turn_end`, asks loopx `quota should-run`; if true and under the cap, injects the next turn via `pi.sendUserMessage()`. Trigger inside pi with `/auto-loop` (or launch with `pi --auto-loopx` / `LOOPX_AUTO_CONTINUE=1`). Cap: `LOOPX_MAX_TURNS` env (default 25) or `/auto-loop --max-turns N` inline. Stops on a loopx gate/quota or the cap.
   - **autonomous-start** — `loopx_start_goal` defaults to autonomous (auto-accept onboarding, begin advancement, no heartbeat), so no onboarding user-gate blocks the auto-loop.
-- **`scripts/setup-pi-loopx.sh`** — the one-click installer above.
+- **`scripts/setup-dromx.sh`** — the one-click installer above.
 - Globally loaded extensions (via `~/.pi/agent/settings.json`): `pi-mcp-adapter`, `pi-subagents`, `pi-hashline-edit`, `pi-messenger`, `pi-intercom`, plus `permission-gate` and `plan-mode` from the built-in examples. (`pi-hashline-edit` replaces the built-in read/edit with hash-anchored editing.)
-
-## Architecture
-
-```
-pi (this fork, run from source via pi-test.sh)
- └ 8 globally-loaded extensions
-     loopx ◄── pi-loopx extension: 6 tools + auto-continue driver + autonomous-start
-     pi-mcp-adapter / pi-subagents / pi-hashline-edit / pi-messenger / pi-intercom
-     permission-gate / plan-mode
-              │  turn_end → quota should-run → sendUserMessage  (the auto-loop)
-              ▼
-        loopx state kernel  (cross-session: goals / todos / gates / evidence / quota)
-```
 
 ## Updating
 
 ```bash
 git pull && npm run build       # refresh the pi source
-bash scripts/setup-pi-loopx.sh  # re-run to pick up extension changes (idempotent)
+bash scripts/setup-dromx.sh  # re-run to pick up extension changes (idempotent)
 ```
 
 > The `pi-loopx` extension path in `~/.pi/agent/settings.json` points into this repo (`packages/coding-agent/examples/extensions/loopx/index.ts`). If you move/rename the repo, re-run the setup script to update the path.
+
+## Credits
+
+DromX-Code stands on the shoulders of:
+
+- **[pi-mono](https://github.com/earendil-works/pi-mono)** — the Pi coding agent by [earendil-works](https://github.com/earendil-works) / Mario Zechner. This fork builds directly on its runtime, tools, and extension system.
+- **[loopx](https://github.com/huangruiteng/loopx)** — the loop-engineering state kernel by [huangruiteng](https://github.com/huangruiteng), powering the autonomous mode (durable goals / todos / gates / evidence across turns and sessions).
 
 ---
 
@@ -167,7 +159,7 @@ npm run build         # Refresh model data, then build all packages
 npm run build:offline # Rebuild using existing model data without network access
 npm run check         # Lint, format, and type check
 ./test.sh            # Run tests (skips LLM-dependent tests without API keys)
-./pi-test.sh         # Run pi from sources (can be run from any directory)
+./dromx-test.sh      # Run dromx from sources (can be run from any directory)
 ```
 
 ## Building standalone binaries from release source

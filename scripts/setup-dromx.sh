@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# setup-pi-loopx.sh — one-click install of the pi + loopx autonomous stack.
+# setup-dromx.sh — one-click install of the dromx + loopx autonomous stack.
 #
 # What it does:
 #   1. checks node >=22.19
@@ -15,7 +15,7 @@
 #
 # Usage:
 #   git clone https://github.com/tony3liu/DromX-Code.git && cd DromX-Code
-#   bash scripts/setup-pi-loopx.sh
+#   bash scripts/setup-dromx.sh
 #
 # Prereqs (the script checks + instructs, does NOT install these for you):
 #   - node >= 22.19  (nvm install 22 / n 22 / brew install node@22)
@@ -28,7 +28,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
-PI="$REPO/pi-test.sh"
+PI="$REPO/dromx-test.sh"
 AGENT_DIR="$HOME/.pi/agent"
 EXT_DIR="$AGENT_DIR/extensions"
 SETTINGS="$AGENT_DIR/settings.json"
@@ -177,6 +177,8 @@ add_alias(){
 say "aliases (in $RC):"
 add_alias "pi" "$PI"
 add_alias "pi-auto" "LOOPX_MAX_TURNS=100 PI_OFFLINE=1 $PI --auto-loopx"
+add_alias "dromx" "$PI"  # rebranded command (TUI/process title show "dromx"); `pi` still works
+add_alias "dromx-auto" "LOOPX_MAX_TURNS=100 PI_OFFLINE=1 $PI --auto-loopx"
 
 # --- 7. verify pi loads everything -----------------------------------------
 say "verifying pi loads all extensions (pi --print OK)..."

@@ -907,7 +907,15 @@ export class InteractiveMode {
 
 		// Add header with keybindings from config (unless silenced)
 		if (this.options.verbose || !this.settingsManager.getQuietStartup()) {
-			const logo = theme.bold(theme.fg("accent", APP_NAME)) + theme.fg("dim", ` v${this.version}`);
+			const dromxArt = [
+				"██████╗ ██████╗  ██████╗ ███╗   ███╗██╗  ██╗",
+				"██╔══██╗██╔══██╗██╔═══██╗████╗ ████║╚██╗██╔╝",
+				"██║  ██║██████╔╝██║   ██║██╔████╔██║ ╚███╔╝",
+				"██║  ██║██╔══██╗██║   ██║██║╚██╔╝██║ ██╔██╗",
+				"██████╔╝██║  ██║╚██████╔╝██║ ╚═╝ ██║██╔╝ ██╗",
+				"╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝",
+			].join("\n");
+			const logo = theme.fg("accent", dromxArt) + "\n" + theme.fg("dim", `v${this.version}`);
 
 			// Build startup instructions using keybinding hint helpers
 			const hint = (keybinding: AppKeybinding, description: string) => keyHint(keybinding, description);
@@ -946,7 +954,7 @@ export class InteractiveMode {
 			);
 			const onboarding = theme.fg(
 				"dim",
-				`Pi can explain its own features and look up its docs. Ask it how to use or extend Pi.`,
+				`DromX can explain its own features and look up its docs. Ask it how to use or extend DromX.`,
 			);
 			this.builtInHeader = new ExpandableText(
 				() => `${logo}\n${compactInstructions}\n${compactOnboarding}\n\n${onboarding}`,
@@ -1019,27 +1027,30 @@ export class InteractiveMode {
 				.finally(() => clearTimeout(timeout));
 		}
 
-		// Start version check asynchronously
-		checkForNewPiVersion(this.version).then((newRelease) => {
-			if (newRelease) {
-				this.showNewVersionNotification(newRelease);
-			}
-		});
-
-		// Start package update check asynchronously
-		this.checkForPackageUpdates()
-			.then((updates) => {
-				if (updates.length > 0) {
-					this.showPackageUpdateNotification(updates);
-				}
-			})
-			.finally(() => {
-				// On Windows, npm can overwrite the shared console title while checking
-				// extension package versions. Restore Pi's title after the startup check.
-				if (process.platform === "win32" && this.isInitialized) {
-					this.updateTerminalTitle();
+		// DromX: version + package update checks are opt-in (checkForUpdates setting, default false) for a clean startup.
+		if (this.settingsManager.getCheckForUpdates()) {
+			// Start version check asynchronously
+			checkForNewPiVersion(this.version).then((newRelease) => {
+				if (newRelease) {
+					this.showNewVersionNotification(newRelease);
 				}
 			});
+
+			// Start package update check asynchronously
+			this.checkForPackageUpdates()
+				.then((updates) => {
+					if (updates.length > 0) {
+						this.showPackageUpdateNotification(updates);
+					}
+				})
+				.finally(() => {
+					// On Windows, npm can overwrite the shared console title while checking
+					// extension package versions. Restore Pi's title after the startup check.
+					if (process.platform === "win32" && this.isInitialized) {
+						this.updateTerminalTitle();
+					}
+				});
+		}
 
 		// Check tmux keyboard setup asynchronously
 		this.checkTmuxKeyboardSetup().then((warning) => {
@@ -1606,7 +1617,7 @@ export class InteractiveMode {
 		// Resource rendering is idempotent; chat clears no longer clear this separate container.
 		this.loadedResourcesContainer.clear();
 
-		const showListing = options?.force || this.options.verbose || !this.settingsManager.getQuietStartup();
+		const showListing = options?.force || this.options.verbose || this.settingsManager.getShowResourcesOnStartup();
 		const showDiagnostics = showListing || options?.showDiagnosticsWhenQuiet === true;
 		if (!showListing && !showDiagnostics) {
 			return;

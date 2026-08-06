@@ -103,6 +103,8 @@ export interface Settings {
 	externalEditor?: string; // Command for Ctrl+G external editor; takes precedence over VISUAL/EDITOR
 	shellPath?: string; // Custom shell path (e.g., for Cygwin users on Windows); supports leading ~ expansion
 	quietStartup?: boolean;
+	showResourcesOnStartup?: boolean; // DromX: show [Skills]/[Prompts]/[Extensions] on startup (default false)
+	checkForUpdates?: boolean; // DromX: check for new releases + show Update banner on startup (default false)
 	defaultProjectTrust?: DefaultProjectTrust; // default: "ask"; global setting only
 	shellCommandPrefix?: string; // Prefix prepended to every bash command (e.g., "shopt -s expand_aliases" for alias support)
 	npmCommand?: string[]; // Command used for npm package lookup/install operations, argv-style (e.g., ["mise", "exec", "node@20", "--", "npm"])
@@ -899,6 +901,14 @@ export class SettingsManager {
 		this.globalSettings.quietStartup = quiet;
 		this.markModified("quietStartup");
 		this.save();
+	}
+
+	getShowResourcesOnStartup(): boolean {
+		return this.settings.showResourcesOnStartup ?? false;
+	}
+
+	getCheckForUpdates(): boolean {
+		return this.settings.checkForUpdates ?? false;
 	}
 
 	getDefaultProjectTrust(): DefaultProjectTrust {

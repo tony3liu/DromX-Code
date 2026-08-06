@@ -95,7 +95,7 @@ Run the TUI in a controlled terminal (from the repo root):
 
 ```bash
 tmux new-session -d -s pi-test -x 80 -y 24
-tmux send-keys -t pi-test "./pi-test.sh" Enter
+tmux send-keys -t pi-test "./dromx-test.sh" Enter
 sleep 3 && tmux capture-pane -t pi-test -p     # capture after startup
 tmux send-keys -t pi-test "your prompt here" Enter
 tmux send-keys -t pi-test Escape               # special keys (also C-o for ctrl+o, etc.)
