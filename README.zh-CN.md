@@ -18,6 +18,20 @@ cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
 
+<details>
+<summary>或装预构建 tarball（内部分发，不用 git clone）</summary>
+
+```bash
+npm i -g ./dromx-code-0.0.1.tgz   # dromx CLI（你收到的 .tgz）
+dromx install ./dromx-loopx      # /auto-loop 扩展（你收到的目录）
+pip install loopx                # loopx 状态内核（/auto-loop 用）
+dromx                            # 启动；然后 /login + /auto-loop <目标>
+```
+
+自己打 tarball：`npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)`。
+
+</details>
+
 
 **前置依赖**（脚本会检查并提示，但**不会**替你装这些）：
 
