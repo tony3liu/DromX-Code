@@ -6,10 +6,6 @@
  * goals, todos, human gates, quota, evidence, handoffs — across sessions
  * without shelling out via bash.
  *
- * LoopX is agent-agnostic and CLI-driven; pi is an "other agent" host, so we
- * run LoopX manually from these tools. State lives in <project>/.loopx and
- * <project>/.codex/goals; this extension just calls the `loopx` binary on PATH.
- *
  * Tools:
  *   - loopx_status         : current goals / todos / gates / next action
  *   - loopx_start_goal     : connect project + create a long-running goal
@@ -19,12 +15,14 @@
  *   - loopx_quota_should_run : ask LoopX whether the next turn should run
  *   - loopx_diagnose       : compact evidence packet for replan / handoff
  *
- * Auto-continue driver (opt-in):
- *   On `turn_end`, if enabled and idle, ask loopx `quota should-run`; if true and
- *   under the turn cap, inject a continuation message so pi runs the next tick of
- *   the loopx loop without the user typing each turn. Stop conditions delegate to
- *   loopx (quota/gate) + a hard turn cap backstop.
- *   Enable: `pi --auto-loopx` flag, or `LOOPX_AUTO_CONTINUE=1`. Cap: `LOOPX_MAX_TURNS` (default 25).
+ * Auto-continue driver — trigger it INSIDE pi with `/auto-loop`:
+ *   `/auto-loop`            toggle auto-loop on/off for this session
+ *   `/auto-loop <objective>` enable auto-loop + kick off a loopx goal + drive to completion
+ *   (also still triggerable at launch via `pi --auto-loopx` or `LOOPX_AUTO_CONTINUE=1`)
+ *   On `turn_end`, if enabled + idle, ask loopx `quota should-run`; if true and under the
+ *   turn cap, inject a continuation message via pi.sendUserMessage(). Stop conditions
+ *   delegate to loopx (quota/gate) + a hard turn cap backstop.
+ *   Cap: `LOOPX_MAX_TURNS` (default 25).
  *
  * Requires: `loopx` on PATH (install: pip install git+https://github.com/huangruiteng/loopx)
  */
@@ -123,7 +121,8 @@ function quotaShouldRun(cwd: string, goalId: string): { shouldRun: boolean; deci
 	return { shouldRun: m ? m[1].toLowerCase() === "true" : false, decision: "", reason: r.stdout.slice(0, 200) };
 }
 
-function autoContinueEnabled(pi: ExtensionAPI): boolean {
+/** True if auto-loop is enabled at launch (flag/env). The session toggle (autoLoopOn) is checked separately. */
+function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
 	try {
 		if (pi.getFlag("auto-loopx") === true) return true;
 	} catch {
@@ -139,12 +138,43 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	// Shared session state for the auto-continue driver.
 	let activeGoalId: string | undefined;
 	let autoTurnCount = 0;
+	let autoLoopOn = false; // toggled by /auto-loop inside pi
 	const maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25);
 
 	pi.registerFlag("auto-loopx", {
-		description: "Enable loopx auto-continue: auto-tick the loopx loop across turns until the goal is done, a human gate blocks, or the turn cap is hit.",
+		description: "Enable loopx auto-continue at launch: auto-tick the loopx loop across turns until the goal is done, a human gate blocks, or the turn cap is hit. (Inside a session, use /auto-loop instead.)",
 		type: "boolean",
 		default: false,
+	});
+
+	// `/auto-loop` — trigger auto-loop mode from inside pi (no launch flag needed).
+	pi.registerCommand("auto-loop", {
+		description:
+			"Toggle loopx auto-loop (auto-continue across turns). `/auto-loop <objective>`: enable + start a loopx goal and drive it to completion. `/auto-loop` (no args): toggle on/off.",
+		handler: async (args, ctx) => {
+			const objective = (typeof args === "string" ? args : "").trim();
+			if (objective) {
+				// enable + kick off the goal in one shot
+				autoLoopOn = true;
+				autoTurnCount = 0;
+				ctx.ui.setStatus("loopx", `LoopX: auto-loop ON (cap ${maxAutoTurns})`);
+				ctx.ui.notify(`auto-loop ON — kicking off goal: ${objective.slice(0, 80)}`, "info");
+				pi.sendUserMessage(
+					`用 loopx_start_goal 建目标: ${objective}. 然后驱动循环到完成或遇到需要我决策的 gate（用 loopx_status 定位、loopx_todo_add 拆步、做完用 loopx_todo_update 标 done 附证据、loopx_quota_should_run 查配额）.`,
+				);
+			} else {
+				// toggle
+				autoLoopOn = !autoLoopOn;
+				autoTurnCount = 0;
+				ctx.ui.setStatus("loopx", autoLoopOn ? `LoopX: auto-loop ON (cap ${maxAutoTurns})` : "LoopX: auto-loop OFF");
+				ctx.ui.notify(
+					autoLoopOn
+						? `auto-loop ON — will auto-continue on each turn_end (cap ${maxAutoTurns}). Give a goal or call loopx_status to start.`
+						: "auto-loop OFF",
+					"info",
+				);
+			}
+		},
 	});
 
 	pi.registerTool({
@@ -296,15 +326,17 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	});
 
 	// --- Auto-continue driver ------------------------------------------------
-	// On turn_end (agent idle, waiting for input), if enabled and loopx says the
-	// next turn should run, inject a continuation message. Stop conditions:
+	// On turn_end (agent idle, waiting for input), if enabled (session toggle or
+	// launch flag/env) and loopx says the next turn should run, inject a
+	// continuation message. Stop conditions:
 	//   - disabled (default) -> normal pi behavior
 	//   - no connected loopx goal -> do nothing
 	//   - loopx quota should_run=false (gate/quota) -> stop + notify
 	//   - turn cap hit (LOOPX_MAX_TURNS) -> stop + notify
 	pi.on("turn_end", async (_event, ctx) => {
 		try {
-			if (!autoContinueEnabled(pi)) return;
+			// enabled if the session /auto-loop toggle is on, OR launched with the flag/env
+			if (!(autoLoopOn || autoContinueEnabledAtLaunch(pi))) return;
 			if (typeof ctx?.isIdle === "function" && !ctx.isIdle()) return; // not idle, don't inject
 			const cwd = ctx?.cwd ?? process.cwd();
 			if (!existsSync(registryPath(cwd))) return; // project not connected to loopx
@@ -316,7 +348,13 @@ export default function loopxExtension(pi: ExtensionAPI) {
 				goalId = parseGoalId(s.stdout);
 				if (goalId) activeGoalId = goalId;
 			}
-			if (!goalId) return; // no active goal to continue
+			if (!goalId) {
+				// connected but no goal yet — nudge once, don't spin
+				if (autoTurnCount === 0) {
+					ctx.ui.notify("LoopX auto-loop: connected but no active goal. Call loopx_start_goal first.", "warning");
+				}
+				return;
+			}
 
 			if (autoTurnCount >= maxAutoTurns) {
 				ctx.ui.notify(`LoopX auto-loop: hit turn cap (${maxAutoTurns}). Stopping. Raise LOOPX_MAX_TURNS or continue manually.`, "warning");
@@ -343,6 +381,7 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	// Footer status + reset auto-loop counter each session.
 	pi.on("session_start", (_event, ctx) => {
 		autoTurnCount = 0;
+		autoLoopOn = false; // fresh session: don't inherit a stale toggle
 		try {
 			const cwd = ctx?.cwd ?? process.cwd();
 			const connected = existsSync(registryPath(cwd));

@@ -10,6 +10,8 @@
 
 # DromX-Code
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 A fork of [pi-mono](https://github.com/earendil-works/pi-mono) (the Pi coding agent) with a **loopx-powered autonomous mode**: give it a goal, walk away, and pi runs to completion — tracked by a durable goal / todo / gate / evidence state kernel across turns and sessions.
 
 ## One-click setup
@@ -32,21 +34,28 @@ The script installs the full stack — [loopx](https://github.com/huangruiteng/l
 
 ```bash
 cd ~/your-project
-pi-auto            # = LOOPX_MAX_TURNS=100 PI_OFFLINE=1 pi --auto-loopx
+pi
 ```
 
-Then type your objective and press enter:
+Inside pi, trigger auto-loop with a slash command:
 
 ```
-用 loopx_start_goal 建目标: <your objective here>. 然后驱动循环到完成或遇到需要我的 gate.
+/auto-loop 给 app.py 加 docstring 并验证能跑
 ```
 
-Walk away. The footer shows `LoopX: auto-loop N/100`; pi auto-loops until the goal is done, a human gate blocks, or the turn cap is hit. For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by default**.
+`/auto-loop <objective>` enables auto-loop + starts a loopx goal + drives it to completion in one shot. The footer shows `LoopX: auto-loop N/100`; pi auto-loops until the goal is done, a human gate blocks, or the cap is hit. Walk away.
+
+- `/auto-loop` (no args) — toggle auto-loop on/off for the session.
+- `/auto-loop <objective>` — enable + kick off a loopx goal + drive to completion.
+- Launch-time flag still works: `pi --auto-loopx` (or the `pi-auto` alias = `LOOPX_MAX_TURNS=100 PI_OFFLINE=1 pi --auto-loopx`).
+- Cap: set `LOOPX_MAX_TURNS=100` for bigger tasks (default 25).
+
+For normal (non-autonomous) use, just run `pi` — the auto-loop is **off by default**.
 
 ## What this fork adds on top of pi-mono
 
 - **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:
-  - **auto-continue driver** — on `turn_end`, asks loopx `quota should-run`; if true and under the cap, injects the next turn via `pi.sendUserMessage()`. Opt-in: `pi --auto-loopx` or `LOOPX_AUTO_CONTINUE=1`. Cap: `LOOPX_MAX_TURNS` (default 25). Stops on a loopx gate/quota or the cap.
+  - **auto-continue driver** — on `turn_end`, asks loopx `quota should-run`; if true and under the cap, injects the next turn via `pi.sendUserMessage()`. Trigger inside pi with `/auto-loop` (or launch with `pi --auto-loopx` / `LOOPX_AUTO_CONTINUE=1`). Cap: `LOOPX_MAX_TURNS` (default 25). Stops on a loopx gate/quota or the cap.
   - **autonomous-start** — `loopx_start_goal` defaults to autonomous (auto-accept onboarding, begin advancement, no heartbeat), so no onboarding user-gate blocks the auto-loop.
 - **`scripts/setup-pi-loopx.sh`** — the one-click installer above.
 - Globally loaded extensions (via `~/.pi/agent/settings.json`): `pi-mcp-adapter`, `pi-subagents`, `pi-hashline-edit`, `pi-messenger`, `pi-intercom`, plus `permission-gate` and `plan-mode` from the built-in examples. (`pi-hashline-edit` replaces the built-in read/edit with hash-anchored editing.)
