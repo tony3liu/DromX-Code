@@ -41,4 +41,7 @@ todo.md
 plans/
 .pi/hf-sessions/
 .pi/hf-sessions-backup/
+# DromX: loopx project state from /auto-loop (local, don't commit)
+.loopx/
+.codex/
 collect.sh

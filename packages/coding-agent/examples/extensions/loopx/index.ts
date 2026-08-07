@@ -29,7 +29,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -154,6 +154,28 @@ function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
 }
 
 // --------------------------------------------------------------------------
+
+/** Ensure <cwd>/.gitignore ignores dromx local state (.pi/ .loopx/ .codex/).
+ *  Only in git repos. Append-only (never modifies existing content). Idempotent:
+ *  if all rules already present, does nothing. Returns the rules it added. */
+function ensureProjectGitignore(cwd: string): string[] {
+	if (!existsSync(join(cwd, ".git"))) return []; // only in git repos
+	const giPath = join(cwd, ".gitignore");
+	const rules = [".pi/", ".loopx/", ".codex/"];
+	let content = "";
+	try {
+		content = readFileSync(giPath, "utf-8");
+	} catch {
+		// .gitignore doesn't exist yet — appendFileSync will create it
+	}
+	const lines = content.split(/\r?\n/);
+	const missing = rules.filter((r) => !lines.some((l) => l.trim() === r));
+	if (missing.length === 0) return []; // already written — treat as done
+	const header =
+		(content.length === 0 ? "" : content.endsWith("\n") ? "" : "\n") + "# dromx local state (auto-added by dromx)\n";
+	appendFileSync(giPath, header + missing.join("\n") + "\n");
+	return missing;
+}
 
 export default function loopxExtension(pi: ExtensionAPI) {
 	// Shared session state for the auto-continue driver.
@@ -415,6 +437,11 @@ export default function loopxExtension(pi: ExtensionAPI) {
 		maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25);
 		try {
 			const cwd = ctx?.cwd ?? process.cwd();
+			// Ensure .gitignore ignores dromx local state (.pi/ .loopx/ .codex/) — create if missing, append if absent.
+			const added = ensureProjectGitignore(cwd);
+			if (added.length > 0) {
+				ctx.ui.notify(`dromx: added ${added.join(", ")} to .gitignore (local state)`, "info");
+			}
 			const connected = existsSync(registryPath(cwd));
 			const label = connected
 				? `LoopX: connected${activeGoalId ? ` (${activeGoalId})` : ""}`

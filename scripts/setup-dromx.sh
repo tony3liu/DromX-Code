@@ -183,9 +183,9 @@ add_alias "dromx-auto" "LOOPX_MAX_TURNS=100 PI_OFFLINE=1 $PI --auto-loopx"
 # --- 7. verify pi loads everything -----------------------------------------
 say "verifying pi loads all extensions (pi --print OK)..."
 if PI_OFFLINE=1 "$PI" --print "Reply with exactly: OK" 2>&1 | tail -3 | grep -q "^OK$"; then
-  say "pi loads all extensions cleanly ✅"
+  say "dromx loads all extensions cleanly ✅"
 else
-  warn "pi did not reply OK — an extension may have failed to load. Run: $PI --print 'Reply: OK' to see the error."
+  warn "dromx did not reply OK — an extension may have failed to load. Run: $PI --print 'Reply: OK' to see the error."
 fi
 
 cat <<EOF
@@ -195,15 +195,20 @@ cat <<EOF
 
   source $RC        # (or open a new terminal)
   cd ~/your-project
-  pi-auto
-  # type your objective, press enter, walk away.
-  # footer shows "LoopX: auto-loop N/100"; stops at goal-done / gate / cap.
+  dromx                               # start; then /login + /auto-loop <objective>
+  # /auto-loop drives the loopx loop to completion (footer: "LoopX: auto-loop N/100")
 
 Notes:
-  • pi runs from source at: $REPO  (update: git pull && npm run build)
-  • pi-loopx extension path is tied to that repo: $LOOPX_EXT
+  • dromx runs from source at: $REPO  (update: git pull && npm run build)
+  • the loopx extension path is tied to that repo: $LOOPX_EXT
   • loopx is on PATH; health: loopx doctor
-  • provider key in $RC (or /login inside pi)
+  • provider key in $RC (or /login inside dromx)
   • re-run this script any time — it's idempotent.
+
+Per-project .gitignore — dromx auto-ensures these on first run in a git repo
+(creates .gitignore if missing, appends if absent; idempotent — skips if present):
+    .pi/
+    .loopx/
+    .codex/
 ──────────────────────────────────────────────────────────────────
 EOF
