@@ -14,9 +14,17 @@
 
 You'll need **Node 22.19+** and an **API key** for a model provider (asked at install, or run `/login` later).
 
-### Option A: package (all platforms, simplest)
+### Option A: package (all platforms)
 
-Get the shared `dromx-code-<version>.tgz`, then:
+**1. Build a tarball** (in the repo):
+
+```bash
+npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)   # → dromx-code-<version>.tgz
+```
+
+> To bump the version, edit `version` in `packages/coding-agent/package.json` (both the TUI banner and the tarball filename read it).
+
+**2. Install the `.tgz`** (any platform; the CLI + `/auto-loop` + `/webbridge` extensions auto-register):
 
 ```bash
 # macOS / Linux
@@ -28,17 +36,17 @@ npm i -g .\dromx-code-<version>.tgz
 
 Run `dromx`, then `/login` to add your API key.
 
+> For the `/auto-loop` autonomous mode, also install loopx (a Python package npm can't install): `pip install loopx`. For `/webbridge` browser control, running `/webbridge` the first time prints the install command for your OS. Basic chat and coding work out of the box.
+
 ### Option B: one-line script (macOS / Linux only)
 
-Install from source; the script sets everything up (including loopx and the browser daemon):
+Install from source; the script sets **everything** up automatically (including loopx and the browser daemon), nothing to install by hand:
 
 ```bash
 git clone https://github.com/tony3liu/DromX-Code.git
 cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
-
-> Full features: `/auto-loop` needs Python + `pip install loopx` (Option B installs it for you); `/webbridge` prints the right install command for your OS the first time. Basic chat and coding work out of the box with either option.
 
 ## Use it
 
@@ -91,18 +99,6 @@ DromX is built on two excellent open-source projects:
 - **[loopx](https://github.com/huangruiteng/loopx)** by [huangruiteng](https://github.com/huangruiteng) — powers the autonomous mode.
 
 Real-browser control uses [Kimi WebBridge](https://www.kimi.com/features/webbridge) by Moonshot AI.
-
-<details>
-<summary>Distribute / build (package it for others)</summary>
-
-Bundle DromX into a single tarball others install with `npm i -g` (CLI + the `/auto-loop` and `/webbridge` extensions, auto-registered on install):
-
-```bash
-npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)   # → dromx-code-<version>.tgz
-```
-
-To bump the version, edit `version` in `packages/coding-agent/package.json` (both the TUI banner and the tarball filename read it).
-</details>
 
 ## License
 

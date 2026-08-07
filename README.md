@@ -14,9 +14,17 @@
 
 需要 **Node 22.19+**，以及一个模型服务的 **API key**（安装时会问，或之后用 `/login` 添加）。
 
-### 方式一：安装包（全平台，最简单）
+### 方式一：安装包（全平台）
 
-拿到分享给你的 `dromx-code-<version>.tgz`，然后：
+**1. 打包**（在项目里，打出一个 tarball）：
+
+```bash
+npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)   # → dromx-code-<version>.tgz
+```
+
+> 改版本号：编辑 `packages/coding-agent/package.json` 的 `version`（TUI 显示和 tarball 文件名都读它）。
+
+**2. 安装**（拿到 `.tgz` 后，全平台通用；CLI + `/auto-loop` + `/webbridge` 扩展会自动注册）：
 
 ```bash
 # macOS / Linux
@@ -28,17 +36,17 @@ npm i -g .\dromx-code-<version>.tgz
 
 装完运行 `dromx`，再 `/login` 填入 API key 即可。
 
+> 想用 `/auto-loop` 自治模式，还需装 loopx（Python 包，npm 装不了）：`pip install loopx`。想用 `/webbridge` 浏览器控制，首次运行 `/webbridge` 会提示对应平台的安装命令。基础对话和编码开箱即用。
+
 ### 方式二：一键脚本（仅 macOS / Linux）
 
-从源码安装，脚本会把所有东西（含 loopx、浏览器 daemon）都配好：
+从源码安装，脚本会把所有东西（含 loopx、浏览器 daemon）**全部自动配好**，无需手动装：
 
 ```bash
 git clone https://github.com/tony3liu/DromX-Code.git
 cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
-
-> 完整功能：`/auto-loop` 需要 Python + `pip install loopx`（方式二会自动装）；`/webbridge` 首次会提示对应平台的安装命令。基础对话和编码两种方式都开箱即用。
 
 ## 使用
 
@@ -91,18 +99,6 @@ DromX 基于两个优秀的开源项目构建：
 - **[loopx](https://github.com/huangruiteng/loopx)** —— [huangruiteng](https://github.com/huangruiteng) 的项目，驱动自治模式。
 
 真实浏览器控制使用 Moonshot AI 的 [Kimi WebBridge](https://www.kimi.com/features/webbridge)。
-
-<details>
-<summary>分发 / 构建（打包给别人用）</summary>
-
-把 DromX 打成一个 tarball，分享给别人 `npm i -g` 安装（CLI + `/auto-loop` + `/webbridge` 扩展，安装时自动注册）：
-
-```bash
-npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)   # → dromx-code-<version>.tgz
-```
-
-改版本号：编辑 `packages/coding-agent/package.json` 的 `version`（TUI 显示和 tarball 文件名都读它）。
-</details>
 
 ## License
 
