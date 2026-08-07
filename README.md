@@ -14,7 +14,23 @@
 
 需要 **Node 22.19+**，以及一个模型服务的 **API key**（安装时会问，或之后用 `/login` 添加）。
 
-**macOS / Linux** —— 一键脚本：
+### 方式一：安装包（全平台，最简单）
+
+拿到分享给你的 `dromx-code-<version>.tgz`，然后：
+
+```bash
+# macOS / Linux
+npm i -g ./dromx-code-<version>.tgz
+
+# Windows（PowerShell）
+npm i -g .\dromx-code-<version>.tgz
+```
+
+装完运行 `dromx`，再 `/login` 填入 API key 即可。
+
+### 方式二：一键脚本（仅 macOS / Linux）
+
+从源码安装，脚本会把所有东西（含 loopx、浏览器 daemon）都配好：
 
 ```bash
 git clone https://github.com/tony3liu/DromX-Code.git
@@ -22,18 +38,7 @@ cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
 
-脚本会自动配好一切，缺什么会提示你。
-
-**Windows** —— 用安装包（在 PowerShell 里）：
-
-```powershell
-npm i -g .\dromx-code-<version>.tgz   # 向分享给你的人要这个 .tgz 文件
-dromx                                  # 然后 /login 填入你的 API key
-```
-
-> Windows 上想用完整功能：`/auto-loop` 需要先装 Python 再 `pip install loopx`；`/webbridge` 首次会提示你在 PowerShell 里跑一条安装命令。基础对话和编码开箱即用。
->
-> Mac/Linux 用户也可以用安装包（把上面命令的 `.\` 换成 `./`）。
+> 完整功能：`/auto-loop` 需要 Python + `pip install loopx`（方式二会自动装）；`/webbridge` 首次会提示对应平台的安装命令。基础对话和编码两种方式都开箱即用。
 
 ## 使用
 
