@@ -235,7 +235,9 @@ export class FooterComponent implements Component {
 			const sortedStatuses = Array.from(extensionStatuses.entries())
 				.sort(([a], [b]) => a.localeCompare(b))
 				.map(([, text]) => sanitizeStatusText(text));
-			const statusLine = sortedStatuses.join(" ");
+			// Separate multiple extension statuses with a middot so they don't run together
+			// (e.g. "LoopX: not connected · WebBridge: connected"), matching the header hint style.
+			const statusLine = sortedStatuses.join(" · ");
 			// Truncate to terminal width with dim ellipsis for consistency with footer style
 			lines.push(truncateToWidth(statusLine, width, theme.fg("dim", "...")));
 		}
