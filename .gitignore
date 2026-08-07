@@ -46,3 +46,5 @@ plans/
 .loopx/
 .codex/
 collect.sh
+# dromx local state (auto-added by dromx)
+.pi/

@@ -1185,6 +1185,16 @@ export class InteractiveMode {
 			return undefined;
 		}
 
+		// DromX: the upstream pi CHANGELOG is not relevant to this fork. Unless updates are
+		// opted in (checkForUpdates), swallow the "What's New" banner — but still advance
+		// lastChangelogVersion so it doesn't re-trigger every startup.
+		if (!this.settingsManager.getCheckForUpdates()) {
+			if (this.settingsManager.getLastChangelogVersion() !== VERSION) {
+				this.settingsManager.setLastChangelogVersion(VERSION);
+			}
+			return undefined;
+		}
+
 		const lastVersion = this.settingsManager.getLastChangelogVersion();
 		const changelogPath = getChangelogPath();
 		const entries = parseChangelog(changelogPath);

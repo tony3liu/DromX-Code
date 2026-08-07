@@ -8,6 +8,7 @@
 #   3. installs 6 pi extensions (mcp-adapter, subagents, hashline-edit,
 #      messenger, intercom, web-access) with a ghproxy mirror fallback for flaky GitHub clones
 #   4. copies the built-in permission-gate + plan-mode examples
+#   4b. installs the Kimi WebBridge daemon + skill + autostart extension (real-browser control; --no-webbridge to skip)
 #   5. registers the pi-loopx extension (6 tools + auto-continue + autonomous-start) in settings.json
 #   6. prompts for a DeepSeek API key (optional; /login works too)
 #   7. adds `pi` and `pi-auto` aliases
@@ -127,6 +128,52 @@ say "copying built-in extensions (permission-gate, plan-mode)..."
 cp "$REPO/packages/coding-agent/examples/extensions/permission-gate.ts" "$EXT_DIR/" 2>/dev/null || warn "permission-gate.ts copy failed"
 cp -r "$REPO/packages/coding-agent/examples/extensions/plan-mode" "$EXT_DIR/" 2>/dev/null || warn "plan-mode copy failed"
 
+# --- 4b. Kimi WebBridge (real-browser control) — daemon + skill (default) ---
+# dromx ships WebBridge support by default: install the local daemon binary (NOT
+# started — dromx controls start/stop via the /webbridge command) and copy its
+# skill into the dromx skills dir. The user installs the Chrome EXTENSION themselves
+# (a browser action a script can't do) — see README. Skipped with --no-webbridge.
+if [ "${1:-}" != "--no-webbridge" ]; then
+  KWB_BIN="$HOME/.kimi-webbridge/bin/kimi-webbridge"
+  if [ -x "$KWB_BIN" ]; then
+    say "Kimi WebBridge daemon already installed — skipping."
+  else
+    say "installing Kimi WebBridge daemon (real-browser control; --no-start --no-skill — dromx controls start/stop via /webbridge, and wires the skill itself)..."
+    if curl -fsSL https://kimi-web-img.moonshot.cn/webbridge/install.sh | bash -s -- --no-start --no-skill >/tmp/kwb-install.log 2>&1; then
+      say "Kimi WebBridge daemon installed (not started — run /webbridge inside dromx to start it)."
+    else
+      warn "Kimi WebBridge daemon install failed (see /tmp/kwb-install.log) — browser control will be unavailable until installed. Non-fatal."
+    fi
+  fi
+  # Copy the WebBridge skill into the dromx skills dir (install.sh --no-skill didn't).
+  # It gets installed to other agents' dirs by `kimi-webbridge install-skill`; grab it from there,
+  # else fall back to running install-skill for Claude Code and copying from there.
+  KWB_SKILL_DST="$AGENT_DIR/skills/kimi-webbridge"
+  if [ -x "$KWB_BIN" ] && [ ! -f "$KWB_SKILL_DST/SKILL.md" ]; then
+    mkdir -p "$AGENT_DIR/skills"
+    KWB_SKILL_SRC=""
+    for d in "$HOME/.claude/skills/kimi-webbridge" "$HOME/.codex/skills/kimi-webbridge"; do
+      [ -f "$d/SKILL.md" ] && KWB_SKILL_SRC="$d" && break
+    done
+    if [ -z "$KWB_SKILL_SRC" ]; then
+      "$KWB_BIN" install-skill -y >/dev/null 2>&1 || true
+      for d in "$HOME/.claude/skills/kimi-webbridge" "$HOME/.codex/skills/kimi-webbridge"; do
+        [ -f "$d/SKILL.md" ] && KWB_SKILL_SRC="$d" && break
+      done
+    fi
+    if [ -n "$KWB_SKILL_SRC" ]; then
+      cp -r "$KWB_SKILL_SRC" "$KWB_SKILL_DST" && say "WebBridge skill → $KWB_SKILL_DST"
+    else
+      warn "could not locate the kimi-webbridge skill to copy into dromx skills dir."
+    fi
+  fi
+  # Register the webbridge extension — provides the /webbridge command (start daemon + launch Chrome + guide extension install).
+  cp -r "$REPO/packages/coding-agent/examples/extensions/webbridge" "$EXT_DIR/" 2>/dev/null \
+    && say "installed webbridge extension (use /webbridge inside dromx to enable browser control)" || warn "webbridge copy failed"
+else
+  say "skipping Kimi WebBridge (--no-webbridge)"
+fi
+
 # --- 5. register pi-loopx extension in settings.json -----------------------
 say "registering pi-loopx extension in $SETTINGS..."
 [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
@@ -204,6 +251,14 @@ Notes:
   • loopx is on PATH; health: loopx doctor
   • provider key in $RC (or /login inside dromx)
   • re-run this script any time — it's idempotent.
+
+Kimi WebBridge (real-browser control):
+  • daemon installed at ~/.kimi-webbridge/bin/kimi-webbridge (health: kimi-webbridge status)
+  • Enable inside dromx with:  /webbridge   (starts daemon, launches a clean Chrome profile,
+    and tells you how to install the browser extension). Check anytime with /webbridge status.
+  • YOU install the Chrome EXTENSION yourself: https://www.kimi.com/features/webbridge
+    (install it in the dromx-launched window ~/.dromx-chrome; a clean profile avoids other
+    extensions stealing the tab via CDP.)
 
 Per-project .gitignore — dromx auto-ensures these on first run in a git repo
 (creates .gitignore if missing, appends if absent; idempotent — skips if present):

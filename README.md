@@ -95,6 +95,28 @@ Quick reference for everyday dromx use (full set in `dromx --help` and the [usag
 | `Ctrl+G` | Open external editor (`$EDITOR` / nano) |
 | `Shift+Enter` | Newline (multi-line input) |
 
+## Real-browser control (Kimi WebBridge)
+
+dromx supports [Kimi WebBridge](https://www.kimi.com/features/webbridge) **by default** — drive your **real Chrome** (navigate, click, fill, read, screenshot) using your actual login sessions, so dromx can work with sites behind a login. Architecture: `dromx → kimi-webbridge skill (curl to the local daemon :10086) → Chrome extension → your browser`.
+
+`setup-dromx.sh` installs the **daemon** and wires the **skill**. Enabling the browser side is a one-liner inside dromx:
+
+```
+/webbridge          # start the daemon, launch a dedicated clean Chrome profile, and show how to install the extension
+/webbridge status   # report daemon + extension connection
+```
+
+You still do two things yourself:
+
+1. **Install the Chrome extension** (a browser action a script can't do): https://www.kimi.com/features/webbridge — install it in the Chrome window `/webbridge` launches (`~/.dromx-chrome`).
+2. Keep it connected (`/webbridge status` → connected).
+
+Then just ask: *"use webbridge to open X, read it / click Y / screenshot"*.
+
+> Why a dedicated Chrome profile: Chrome's CDP allows only **one** extension attached per tab, so other automation / custom-new-tab / recorder extensions in your main profile steal the tab and browser ops fail with `Cannot access a chrome-extension:// URL of different extension`. The clean profile avoids that.
+>
+> Skip the daemon at setup with `bash scripts/setup-dromx.sh --no-webbridge`.
+
 ## Changes dromx makes on top of pi-mono
 
 - **`packages/coding-agent/examples/extensions/loopx/`** — the `pi-loopx` extension. Six tools that wrap the loopx CLI (`loopx_status`, `loopx_start_goal`, `loopx_todo_add`, `loopx_todo_update`, `loopx_quota_should_run`, `loopx_diagnose`), plus:

@@ -96,6 +96,28 @@ dromx
 | `Ctrl+G` | 外部编辑器（`$EDITOR` / nano） |
 | `Shift+Enter` | 换行（多行输入） |
 
+## 真实浏览器控制（Kimi WebBridge）
+
+dromx **默认支持** [Kimi WebBridge](https://www.kimi.com/features/webbridge) —— 让 dromx 操控你的**真实 Chrome**（打开网页、点击、填表、读取、截图），复用你的登录态，所以能操作需要登录的网站。架构：`dromx → kimi-webbridge skill（curl 到本地 daemon :10086）→ Chrome 扩展 → 你的浏览器`。
+
+`setup-dromx.sh` 会装好 **daemon** 并接好 **skill**。启用浏览器侧在 dromx 里一条命令：
+
+```
+/webbridge          # 启动 daemon、打开一个干净的专用 Chrome profile、并提示如何装扩展
+/webbridge status   # 查看 daemon + 扩展连接状态
+```
+
+有两件事你自己做：
+
+1. **装 Chrome 扩展**（脚本装不了浏览器插件）：https://www.kimi.com/features/webbridge —— 装在 `/webbridge` 打开的那个 Chrome 窗口里（`~/.dromx-chrome`）。
+2. 保持它连着（`/webbridge status` → connected）。
+
+然后直接说：*"用 webbridge 打开 X，读一下 / 点 Y / 截图"*。
+
+> 为什么用专用 Chrome profile：Chrome 的 CDP 每个标签只允许**一个**扩展 attach，主 profile 里其他自动化/自定义新标签/录屏类扩展会抢占标签，导致浏览器操作报 `Cannot access a chrome-extension:// URL of different extension`。干净 profile 避免这个坑。
+>
+> 安装时跳过 daemon：`bash scripts/setup-dromx.sh --no-webbridge`。
+
 ## dromx基于pi所做的变更
 
 - **`packages/coding-agent/examples/extensions/loopx/`** —— `pi-loopx` 扩展。六个封装 loopx CLI 的工具（`loopx_status`、`loopx_start_goal`、`loopx_todo_add`、`loopx_todo_update`、`loopx_quota_should_run`、`loopx_diagnose`），外加：
