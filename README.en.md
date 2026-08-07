@@ -36,7 +36,7 @@ npm i -g .\dromx-code-<version>.tgz
 
 Run `dromx`, then `/login` to add your API key.
 
-> For the `/auto-loop` autonomous mode, also install loopx (a Python package npm can't install): `pip install loopx`. For `/webbridge` browser control, running `/webbridge` the first time prints the install command for your OS. Basic chat and coding work out of the box.
+> The first time you use `/auto-loop`, if the loopx engine is missing it offers to install it for you (needs Python 3). `/webbridge` likewise prints the install command for your OS on first run. Basic chat and coding work out of the box.
 
 ### Option B: one-line script (macOS / Linux only)
 

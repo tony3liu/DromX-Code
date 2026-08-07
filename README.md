@@ -36,7 +36,7 @@ npm i -g .\dromx-code-<version>.tgz
 
 装完运行 `dromx`，再 `/login` 填入 API key 即可。
 
-> 想用 `/auto-loop` 自治模式，还需装 loopx（Python 包，npm 装不了）：`pip install loopx`。想用 `/webbridge` 浏览器控制，首次运行 `/webbridge` 会提示对应平台的安装命令。基础对话和编码开箱即用。
+> 首次用 `/auto-loop` 自治模式时，若缺 loopx 引擎会提示你一键自动安装（需要 Python 3）。`/webbridge` 浏览器控制首次运行也会提示对应平台的安装命令。基础对话和编码开箱即用。
 
 ### 方式二：一键脚本（仅 macOS / Linux）
 

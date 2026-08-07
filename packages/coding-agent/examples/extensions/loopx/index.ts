@@ -153,6 +153,72 @@ function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
 	return v === "1" || v === "true" || v === "yes";
 }
 
+/** Is the `loopx` CLI on PATH? */
+function loopxInstalled(): boolean {
+	const r = spawnSync(LOOPX_BIN, ["--version"], { encoding: "utf-8", timeout: 8_000 });
+	return !r.error;
+}
+
+/** Find a usable python that has pip, preferring newer. Returns the python command or undefined. */
+function findPython(): string | undefined {
+	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python"]) {
+		const r = spawnSync(c, ["-c", "import sys,pip;print(sys.version_info[0])"], { encoding: "utf-8", timeout: 8_000 });
+		if (!r.error && r.status === 0 && r.stdout.trim() === "3") return c;
+	}
+	return undefined;
+}
+
+/**
+ * Ensure the `loopx` CLI is available (auto-loop needs it). If missing, ask the
+ * user once, then `pip install loopx` with a detected python. Returns true if
+ * loopx is usable afterward. Best-effort; on failure gives a manual hint.
+ */
+async function ensureLoopxInstalled(ctx: {
+	ui: { confirm(t: string, m: string): Promise<boolean>; notify(m: string, level?: string): void };
+}): Promise<boolean> {
+	if (loopxInstalled()) return true;
+
+	const py = findPython();
+	if (!py) {
+		ctx.ui.notify(
+			"auto-loop needs loopx (a Python package), but no Python 3 with pip was found. Install Python 3.11+, then: pip install loopx",
+			"warning",
+		);
+		return false;
+	}
+
+	const ok = await ctx.ui.confirm(
+		"Install loopx?",
+		`Auto-loop needs the loopx engine (a Python package). Install it now with '${py} -m pip install --user loopx'?`,
+	);
+	if (!ok) {
+		ctx.ui.notify("Skipped. Install later with: pip install loopx", "info");
+		return false;
+	}
+
+	ctx.ui.notify("Installing loopx (pip)... this may take a moment.", "info");
+	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "loopx"], {
+		encoding: "utf-8",
+		timeout: 180_000,
+	});
+	if (r.error || r.status !== 0) {
+		ctx.ui.notify(
+			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install manually: ${py} -m pip install loopx`,
+			"error",
+		);
+		return false;
+	}
+	if (!loopxInstalled()) {
+		ctx.ui.notify(
+			"loopx installed, but the `loopx` command isn't on PATH yet. Add your Python user bin dir to PATH (or restart the shell), then retry.",
+			"warning",
+		);
+		return false;
+	}
+	ctx.ui.notify("loopx installed ✓", "info");
+	return true;
+}
+
 // --------------------------------------------------------------------------
 
 /** Ensure <cwd>/.gitignore ignores dromx local state (.pi/ .loopx/ .codex/).
@@ -203,6 +269,12 @@ export default function loopxExtension(pi: ExtensionAPI) {
 			const { maxTurns, rest } = parseMaxTurns(raw);
 			if (maxTurns !== undefined) maxAutoTurns = maxTurns;
 			const objective = rest;
+
+			// Auto-loop needs the loopx engine — install it on demand if missing.
+			if (!(await ensureLoopxInstalled(ctx))) {
+				ctx.ui.setStatus("loopx", "LoopX: unavailable (loopx not installed)");
+				return;
+			}
 
 			if (objective) {
 				// enable + kick off the goal in one shot
