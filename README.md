@@ -81,6 +81,20 @@ DromX 基于两个优秀的开源项目构建：
 
 真实浏览器控制使用 Moonshot AI 的 [Kimi WebBridge](https://www.kimi.com/features/webbridge)。
 
+<details>
+<summary>分发 / 构建（打包给别人用）</summary>
+
+把 DromX 打成一个 tarball，分享给别人 `npm i -g` 安装（CLI + `/auto-loop` + `/webbridge` 扩展，安装时自动注册）：
+
+```bash
+npm run build                        # 编译
+node scripts/publish-dromx.mjs       # 组装到 publish/dromx-code/
+cd publish/dromx-code && npm pack    # → dromx-code-<version>.tgz
+```
+
+改版本号：编辑 `packages/coding-agent/package.json` 的 `version`（TUI 显示和 tarball 文件名都读它）。
+</details>
+
 ## License
 
 MIT
