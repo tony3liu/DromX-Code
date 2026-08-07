@@ -1,0 +1,86 @@
+<p align="center">
+  <a href="https://github.com/tony3liu/DromX-Code">
+    <img alt="DromX logo" src="docs/images/dromx-logo.svg" width="200">
+  </a>
+</p>
+
+# DromX-Code
+
+[中文](README.md) | English
+
+**DromX is an AI coding agent that finishes the job.** Give it a goal, walk away — it keeps working across turns until the task is done. It can also drive your real browser (with your logins) to read pages, click, fill forms, and take screenshots.
+
+## Install
+
+```bash
+git clone https://github.com/tony3liu/DromX-Code.git
+cd DromX-Code
+bash scripts/setup-dromx.sh
+```
+
+The script sets everything up and tells you if anything is missing. You'll need **Node 22.19+**, and an **API key** for a model provider (it'll ask, or run `/login` later).
+
+<details>
+<summary>No git? Install from a prebuilt package instead.</summary>
+
+```bash
+npm i -g ./dromx-code-<version>.tgz   # ask whoever shared it for the .tgz
+dromx                                 # then /login to add your API key
+```
+</details>
+
+## Use it
+
+```bash
+cd your-project
+dromx
+```
+
+Just talk to it. To let it run on its own until a task is done:
+
+```
+/auto-loop add unit tests for the payment module and make them pass
+```
+
+DromX keeps going turn after turn — the footer shows progress like `auto-loop 3/100` — and stops when the goal is met, it needs a decision from you, or it hits the limit. Type `/auto-loop` alone to toggle it; add `--max-turns 50` to change the limit.
+
+Everyday commands inside DromX:
+
+| | |
+|---|---|
+| `/login` | Add or switch your model provider key |
+| `/model` | Switch models |
+| `/auto-loop <goal>` | Run autonomously until done |
+| `/webbridge` | Turn on real-browser control (see below) |
+| `!command` | Run a shell command |
+| `Ctrl+T` | Show/hide the model's thinking |
+| `Ctrl+C` / `Ctrl+D` | Cancel / exit |
+
+Start again later with `dromx` (new), `dromx -c` (continue last), or `dromx -r` (pick a past session).
+
+## Control your real browser
+
+DromX can drive your actual Chrome — using your existing logins — to browse, click, fill forms, and screenshot. Turn it on once:
+
+```
+/webbridge
+```
+
+The first time, DromX opens a fresh Chrome window on the extension's install page — click **"Add to Chrome"**, then you're set. After that, just ask:
+
+> "open my dashboard and screenshot the latest report"
+
+Check status anytime with `/webbridge status`.
+
+## Credits
+
+DromX is built on two excellent open-source projects:
+
+- **[pi-mono](https://github.com/earendil-works/pi-mono)** by [earendil-works](https://github.com/earendil-works) / Mario Zechner — the coding agent DromX is based on.
+- **[loopx](https://github.com/huangruiteng/loopx)** by [huangruiteng](https://github.com/huangruiteng) — powers the autonomous mode.
+
+Real-browser control uses [Kimi WebBridge](https://www.kimi.com/features/webbridge) by Moonshot AI.
+
+## License
+
+MIT

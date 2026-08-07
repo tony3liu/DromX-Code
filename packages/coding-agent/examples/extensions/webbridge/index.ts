@@ -9,9 +9,9 @@
  * dromx ships this integration by default (setup installs the daemon + skill).
  * Enabling the browser side is USER-DRIVEN via a slash command:
  *
- *   /webbridge          Enable: start the daemon, launch a dedicated clean Chrome
- *                       profile if the extension isn't connected, and print how to
- *                       install the Chrome extension. Then check status.
+ *   /webbridge          Enable: start the daemon; if the browser extension isn't connected,
+ *                       open a dedicated clean Chrome window at the extension install page so
+ *                       the user can click "Add to Chrome". Then check status.
  *   /webbridge status   Show daemon + extension connection status.
  *
  * On session start it only PASSIVELY reflects status in the footer (never launches
@@ -79,11 +79,10 @@ function findChrome(): string | undefined {
 	return undefined;
 }
 
-function launchChrome(chrome: string): void {
-	const child = spawn(chrome, [`--user-data-dir=${CLEAN_PROFILE}`, "--no-first-run", "--no-default-browser-check"], {
-		detached: true,
-		stdio: "ignore",
-	});
+function launchChrome(chrome: string, url?: string): void {
+	const args = [`--user-data-dir=${CLEAN_PROFILE}`, "--no-first-run", "--no-default-browser-check"];
+	if (url) args.push(url);
+	const child = spawn(chrome, args, { detached: true, stdio: "ignore" });
 	child.unref();
 }
 
@@ -155,12 +154,12 @@ export default function webbridgeExtension(pi: ExtensionAPI) {
 				);
 				return;
 			}
-			launchChrome(chrome);
+			launchChrome(chrome, EXTENSION_URL);
 			ctx.ui.setStatus("webbridge", "WebBridge: launched Chrome");
 			ctx.ui.notify(
-				`WebBridge: launched a dedicated Chrome profile (${CLEAN_PROFILE}).\n` +
-					`In THAT window, install the Kimi WebBridge extension: ${EXTENSION_URL}\n` +
-					`Then run /webbridge status to confirm it's connected. (Dedicated profile avoids other extensions stealing the tab.)`,
+				`WebBridge: opened a dedicated Chrome window (profile ${CLEAN_PROFILE}) at the extension install page.\n` +
+					`Click "Add to Chrome" there to install the Kimi WebBridge extension, then run /webbridge status to confirm it's connected.\n` +
+					`(This window is isolated from your everyday Chrome, so other extensions can't steal the tab.)`,
 				"info",
 			);
 		},
