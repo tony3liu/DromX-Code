@@ -21,14 +21,17 @@ bash scripts/setup-dromx.sh
 <details>
 <summary>Or install a prebuilt tarball (internal distribution — no git clone)</summary>
 
+ONE tarball contains the CLI + the /auto-loop extension (auto-registered on install):
+
 ```bash
-npm i -g ./dromx-code-0.0.1.tgz   # the dromx CLI (you receive the .tgz)
-dromx install ./dromx-loopx      # the /auto-loop extension (local dir you receive)
-pip install loopx                # the loopx state kernel (for /auto-loop)
-dromx                            # run; then /login + /auto-loop <objective>
+npm i -g ./dromx-code-0.0.1.tgz   # dromx CLI + /auto-loop extension (auto-registered via postinstall)
+pip install loopx                 # the loopx state kernel (for /auto-loop)
+dromx                             # run; then /login + /auto-loop <objective>
 ```
 
-To build the tarballs yourself: `npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)`.
+To build the tarball yourself: `npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)`.
+
+If the postinstall auto-register was skipped (it prints a fallback message), run manually: `dromx install $(npm root -g)/dromx-code/examples/extensions/loopx`.
 
 </details>
 
