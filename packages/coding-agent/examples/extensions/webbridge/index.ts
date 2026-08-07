@@ -34,7 +34,10 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const DAEMON_BIN = join(homedir(), ".kimi-webbridge", "bin", "kimi-webbridge");
 const CLEAN_PROFILE = join(homedir(), ".dromx-chrome");
 const EXTENSION_URL = "https://www.kimi.com/features/webbridge";
-const INSTALL_CMD = "curl -fsSL https://kimi-web-img.moonshot.cn/webbridge/install.sh | bash -s -- --no-skill";
+const INSTALL_CMD =
+	platform() === "win32"
+		? "irm https://kimi-web-img.moonshot.cn/webbridge/install.ps1 | iex"
+		: "curl -fsSL https://kimi-web-img.moonshot.cn/webbridge/install.sh | bash -s -- --no-start --no-skill";
 
 interface Status {
 	installed: boolean;

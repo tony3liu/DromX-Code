@@ -12,22 +12,28 @@
 
 ## Install
 
+You'll need **Node 22.19+** and an **API key** for a model provider (asked at install, or run `/login` later).
+
+**macOS / Linux** — one-line script:
+
 ```bash
 git clone https://github.com/tony3liu/DromX-Code.git
 cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
 
-The script sets everything up and tells you if anything is missing. You'll need **Node 22.19+**, and an **API key** for a model provider (it'll ask, or run `/login` later).
+It sets everything up and tells you if anything is missing.
 
-<details>
-<summary>No git? Install from a prebuilt package instead.</summary>
+**Windows** — use the package (in PowerShell):
 
-```bash
-npm i -g ./dromx-code-<version>.tgz   # ask whoever shared it for the .tgz
-dromx                                 # then /login to add your API key
+```powershell
+npm i -g .\dromx-code-<version>.tgz   # ask whoever shared it for the .tgz
+dromx                                  # then /login to add your API key
 ```
-</details>
+
+> For full features on Windows: `/auto-loop` needs Python + `pip install loopx`; `/webbridge` will print a one-line install command to run in PowerShell the first time. Basic chat and coding work out of the box.
+>
+> macOS/Linux users can use the package too (change `.\` to `./`).
 
 ## Use it
 
