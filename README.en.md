@@ -87,9 +87,7 @@ Real-browser control uses [Kimi WebBridge](https://www.kimi.com/features/webbrid
 Bundle DromX into a single tarball others install with `npm i -g` (CLI + the `/auto-loop` and `/webbridge` extensions, auto-registered on install):
 
 ```bash
-npm run build                        # compile
-node scripts/publish-dromx.mjs       # assemble into publish/dromx-code/
-cd publish/dromx-code && npm pack    # → dromx-code-<version>.tgz
+npm run build && node scripts/publish-dromx.mjs && (cd publish/dromx-code && npm pack)   # → dromx-code-<version>.tgz
 ```
 
 To bump the version, edit `version` in `packages/coding-agent/package.json` (both the TUI banner and the tarball filename read it).
