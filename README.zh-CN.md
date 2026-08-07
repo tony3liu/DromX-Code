@@ -24,7 +24,7 @@ bash scripts/setup-dromx.sh
 一个 tarball 含 CLI + /auto-loop 扩展（安装时自动注册）：
 
 ```bash
-npm i -g ./dromx-code-0.0.1.tgz   # dromx CLI + /auto-loop 扩展（postinstall 自动注册）
+npm i -g ./dromx-code-<version>.tgz   # dromx CLI + /auto-loop 扩展（postinstall 自动注册）
 pip install loopx                 # loopx 状态内核（/auto-loop 用）
 dromx                             # 启动；然后 /login + /auto-loop <目标>
 ```
