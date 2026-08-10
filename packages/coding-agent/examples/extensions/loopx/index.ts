@@ -222,9 +222,14 @@ async function ensureLoopxInstalled(ctx: {
 		return block;
 	};
 
+	// pip flags: --user installs to the user site; --break-system-packages is required
+	// for PEP 668 "externally-managed" environments (e.g. uv-managed pythons) that
+	// otherwise refuse to install. Harmless on non-managed environments.
+	const PIP_FLAGS = ["--user", "--break-system-packages"];
+
 	// Step 1: upgrade setuptools/wheel first. Old setuptools (e.g. Anaconda's) silently
 	// builds a broken "UNKNOWN-0.0.0" wheel instead of loopx.
-	const su = spawnSync(py, ["-m", "pip", "install", "--user", "-U", "setuptools>=64", "wheel"], {
+	const su = spawnSync(py, ["-m", "pip", "install", ...PIP_FLAGS, "-U", "setuptools>=64", "wheel"], {
 		encoding: "utf-8",
 		timeout: 120_000,
 	});
@@ -232,7 +237,7 @@ async function ensureLoopxInstalled(ctx: {
 
 	// Step 2: install loopx. --no-build-isolation uses the (upgraded) env setuptools,
 	// since loopx pins setuptools==83.0.0 (not on PyPI) for build isolation.
-	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--no-build-isolation", LOOPX_PIP_SPEC], {
+	const r = spawnSync(py, ["-m", "pip", "install", ...PIP_FLAGS, "--no-build-isolation", LOOPX_PIP_SPEC], {
 		encoding: "utf-8",
 		timeout: 180_000,
 	});
