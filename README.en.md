@@ -36,6 +36,8 @@ npm i -g .\dromx-code-<version>.tgz
 
 Run `dromx`, then `/login` to add your API key.
 
+> If npm is slow in your region, set a faster registry first — extension registration will be much quicker: `npm config set registry https://registry.npmmirror.com`. (Even without it, failed installs auto-retry against that mirror.)
+
 > The first time you use `/auto-loop`, if the loopx engine is missing it offers to install it for you (needs Python 3). `/webbridge` likewise prints the install command for your OS on first run. Basic chat and coding work out of the box.
 
 ### Option B: one-line script (macOS / Linux only)

@@ -36,6 +36,8 @@ npm i -g .\dromx-code-<version>.tgz
 
 装完运行 `dromx`，再 `/login` 填入 API key 即可。
 
+> 🇨🇳 国内用户：装之前建议先把 npm 换成国内源，首次注册扩展会快很多 —— `npm config set registry https://registry.npmmirror.com`。（即使不设，自动注册失败时也会自动用国内源重试。）
+
 > 首次用 `/auto-loop` 自治模式时，若缺 loopx 引擎会提示你一键自动安装（需要 Python 3）。`/webbridge` 浏览器控制首次运行也会提示对应平台的安装命令。基础对话和编码开箱即用。
 
 ### 方式二：一键脚本（仅 macOS / Linux）
