@@ -35,6 +35,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 const LOOPX_BIN = "loopx";
+// loopx is not on PyPI — install from its GitHub repo.
+const LOOPX_PIP_SPEC = "git+https://github.com/huangruiteng/loopx.git";
 
 function registryPath(project: string): string {
 	return join(project, ".loopx", "registry.json");
@@ -174,18 +176,21 @@ function findPython(): string | undefined {
 
 /**
  * Ensure the `loopx` CLI is available (auto-loop needs it). If missing, ask the
- * user once, then `pip install loopx` with a detected python. Returns true if
- * loopx is usable afterward. Best-effort; on failure gives a manual hint.
+ * user once, then pip-install it from GitHub with a detected python. Returns true
+ * if loopx is usable afterward. Best-effort; on failure gives a manual hint.
+ *
+ * Note: loopx is NOT on PyPI — it must be installed from its GitHub repo.
  */
 async function ensureLoopxInstalled(ctx: {
 	ui: { confirm(t: string, m: string): Promise<boolean>; notify(m: string, level?: string): void };
 }): Promise<boolean> {
 	if (loopxInstalled()) return true;
 
+	const manual = `pip install ${LOOPX_PIP_SPEC}`;
 	const py = findPython();
 	if (!py) {
 		ctx.ui.notify(
-			"auto-loop needs loopx (a Python package), but no Python 3 with pip was found. Install Python 3.11+, then: pip install loopx",
+			`auto-loop needs loopx, but no Python 3 with pip was found. Install Python 3.11+, then: ${manual}`,
 			"warning",
 		);
 		return false;
@@ -193,21 +198,21 @@ async function ensureLoopxInstalled(ctx: {
 
 	const ok = await ctx.ui.confirm(
 		"Install loopx?",
-		"Auto-loop needs the loopx engine (a Python package). Install it now? (equivalent to: pip install --user loopx)",
+		`Auto-loop needs the loopx engine. Install it now from GitHub? (equivalent to: ${manual})`,
 	);
 	if (!ok) {
-		ctx.ui.notify("Skipped. Install later with: pip install loopx", "info");
+		ctx.ui.notify(`Skipped. Install later with: ${manual}`, "info");
 		return false;
 	}
 
-	ctx.ui.notify("Installing loopx (pip)... this may take a moment.", "info");
-	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "loopx"], {
+	ctx.ui.notify("Installing loopx from GitHub (pip)... this may take a moment.", "info");
+	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", LOOPX_PIP_SPEC], {
 		encoding: "utf-8",
 		timeout: 180_000,
 	});
 	if (r.error || r.status !== 0) {
 		ctx.ui.notify(
-			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install it manually: pip install loopx`,
+			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install it manually: ${manual}`,
 			"error",
 		);
 		return false;
