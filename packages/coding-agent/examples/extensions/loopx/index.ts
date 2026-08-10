@@ -30,6 +30,7 @@
 
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -206,24 +207,44 @@ async function ensureLoopxInstalled(ctx: {
 	}
 
 	ctx.ui.notify("Installing loopx from GitHub (pip)... this may take a moment.", "info");
-	// Upgrade setuptools/wheel first: loopx uses declarative pyproject package discovery,
-	// and an old setuptools (e.g. bundled with Anaconda) silently builds a broken
-	// "UNKNOWN-0.0.0" wheel instead of loopx. A recent setuptools resolves the name correctly.
-	spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "-U", "setuptools>=64", "wheel"], {
+	const logPath = join(homedir(), ".pi", "agent", "loopx-install.log");
+	const log = (title: string, r: ReturnType<typeof spawnSync>) => {
+		const block =
+			`\n===== ${title} =====\n` +
+			`cmd: ${py} ${(r as { args?: string[] }).args?.slice(1).join(" ") ?? "?"}\n` +
+			`status: ${r.status}  error: ${r.error?.message ?? "none"}\n` +
+			`--- stdout ---\n${r.stdout ?? ""}\n--- stderr ---\n${r.stderr ?? ""}\n`;
+		try {
+			appendFileSync(logPath, block);
+		} catch {
+			// logging is best-effort
+		}
+		return block;
+	};
+
+	// Step 1: upgrade setuptools/wheel first. Old setuptools (e.g. Anaconda's) silently
+	// builds a broken "UNKNOWN-0.0.0" wheel instead of loopx.
+	const su = spawnSync(py, ["-m", "pip", "install", "--user", "-U", "setuptools>=64", "wheel"], {
 		encoding: "utf-8",
 		timeout: 120_000,
 	});
-	// --no-build-isolation: loopx's pyproject pins setuptools==83.0.0 (not on PyPI),
-	// so build isolation fails; use the (now-upgraded) environment setuptools instead.
-	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "--no-build-isolation", LOOPX_PIP_SPEC], {
+	log("setuptools/wheel upgrade", su);
+
+	// Step 2: install loopx. --no-build-isolation uses the (upgraded) env setuptools,
+	// since loopx pins setuptools==83.0.0 (not on PyPI) for build isolation.
+	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--no-build-isolation", LOOPX_PIP_SPEC], {
 		encoding: "utf-8",
 		timeout: 180_000,
 	});
-	if (r.error || r.status !== 0) {
-		ctx.ui.notify(
-			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install it manually: ${manual}`,
-			"error",
-		);
+	log("loopx install", r);
+
+	// Detect the silent UNKNOWN-0.0.0 failure explicitly.
+	const builtUnknown = /Successfully installed UNKNOWN|UNKNOWN-0\.0\.0/.test(`${r.stdout ?? ""}${r.stderr ?? ""}`);
+	if (r.error || r.status !== 0 || builtUnknown) {
+		const reason = builtUnknown
+			? "pip built 'UNKNOWN-0.0.0' instead of loopx (setuptools too old to read loopx's pyproject)"
+			: (r.error?.message ?? `exit ${r.status}`);
+		ctx.ui.notify(`loopx install failed: ${reason}.\nFull log: ${logPath}\nManual: ${manual}`, "error");
 		return false;
 	}
 	if (!loopxInstalled()) {
