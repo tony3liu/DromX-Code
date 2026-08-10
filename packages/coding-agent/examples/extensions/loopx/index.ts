@@ -206,8 +206,15 @@ async function ensureLoopxInstalled(ctx: {
 	}
 
 	ctx.ui.notify("Installing loopx from GitHub (pip)... this may take a moment.", "info");
+	// Upgrade setuptools/wheel first: loopx uses declarative pyproject package discovery,
+	// and an old setuptools (e.g. bundled with Anaconda) silently builds a broken
+	// "UNKNOWN-0.0.0" wheel instead of loopx. A recent setuptools resolves the name correctly.
+	spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "-U", "setuptools>=64", "wheel"], {
+		encoding: "utf-8",
+		timeout: 120_000,
+	});
 	// --no-build-isolation: loopx's pyproject pins setuptools==83.0.0 (not on PyPI),
-	// so build isolation fails; use the environment's existing setuptools instead.
+	// so build isolation fails; use the (now-upgraded) environment setuptools instead.
 	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "--no-build-isolation", LOOPX_PIP_SPEC], {
 		encoding: "utf-8",
 		timeout: 180_000,

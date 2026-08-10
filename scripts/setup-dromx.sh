@@ -75,7 +75,9 @@ else
     :
   else
     warn "official installer failed (see /tmp/loopx-install.log); falling back to pip --user with $PY"
-    # --no-build-isolation: loopx pins setuptools==83.0.0 (not on PyPI); use the env's setuptools.
+    # Upgrade setuptools first (old setuptools builds a broken UNKNOWN-0.0.0 wheel instead of loopx),
+    # then --no-build-isolation (loopx pins setuptools==83.0.0 which isn't on PyPI).
+    "$PY" -m pip install --user --quiet -U "setuptools>=64" wheel 2>&1 | tail -1 || true
     "$PY" -m pip install --user --quiet --no-build-isolation git+https://github.com/huangruiteng/loopx.git 2>&1 | tail -3 || true
   fi
   # make sure the user bin dir is on PATH for this session
