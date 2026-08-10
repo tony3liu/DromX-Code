@@ -82,7 +82,7 @@ const projectParam = Type.Optional(
 );
 
 function resolveCwd(project: string | undefined): string {
-	return project && project.trim() ? project : process.cwd();
+	return project?.trim() ? project : process.cwd();
 }
 
 function notConnectedResult(cwd: string) {
@@ -162,7 +162,10 @@ function loopxInstalled(): boolean {
 /** Find a usable python that has pip, preferring newer. Returns the python command or undefined. */
 function findPython(): string | undefined {
 	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python"]) {
-		const r = spawnSync(c, ["-c", "import sys,pip;print(sys.version_info[0])"], { encoding: "utf-8", timeout: 8_000 });
+		const r = spawnSync(c, ["-c", "import sys,pip;print(sys.version_info[0])"], {
+			encoding: "utf-8",
+			timeout: 8_000,
+		});
 		if (!r.error && r.status === 0 && r.stdout.trim() === "3") return c;
 	}
 	return undefined;
@@ -251,7 +254,8 @@ export default function loopxExtension(pi: ExtensionAPI) {
 	let maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25); // mutable: /auto-loop --max-turns can override
 
 	pi.registerFlag("auto-loopx", {
-		description: "Enable loopx auto-continue at launch: auto-tick the loopx loop across turns until the goal is done, a human gate blocks, or the turn cap is hit. (Inside a session, use /auto-loop instead.)",
+		description:
+			"Enable loopx auto-continue at launch: auto-tick the loopx loop across turns until the goal is done, a human gate blocks, or the turn cap is hit. (Inside a session, use /auto-loop instead.)",
 		type: "boolean",
 		default: false,
 	});
@@ -289,7 +293,10 @@ export default function loopxExtension(pi: ExtensionAPI) {
 				// no objective — toggle (and apply the new cap if given)
 				autoLoopOn = !autoLoopOn;
 				autoTurnCount = 0;
-				ctx.ui.setStatus("loopx", autoLoopOn ? `LoopX: auto-loop ON (cap ${maxAutoTurns})` : "LoopX: auto-loop OFF");
+				ctx.ui.setStatus(
+					"loopx",
+					autoLoopOn ? `LoopX: auto-loop ON (cap ${maxAutoTurns})` : "LoopX: auto-loop OFF",
+				);
 				ctx.ui.notify(
 					autoLoopOn
 						? `auto-loop ON (cap ${maxAutoTurns}) — will auto-continue each turn_end. Give a goal or call loopx_status.`
@@ -480,14 +487,20 @@ export default function loopxExtension(pi: ExtensionAPI) {
 			}
 
 			if (autoTurnCount >= maxAutoTurns) {
-				ctx.ui.notify(`LoopX auto-loop: hit turn cap (${maxAutoTurns}). Stopping. Use /auto-loop --max-turns N to raise, or continue manually.`, "warning");
+				ctx.ui.notify(
+					`LoopX auto-loop: hit turn cap (${maxAutoTurns}). Stopping. Use /auto-loop --max-turns N to raise, or continue manually.`,
+					"warning",
+				);
 				return;
 			}
 
 			const q = quotaShouldRun(cwd, goalId);
 			if (!q.shouldRun) {
 				ctx.ui.setStatus("loopx", "LoopX: auto-loop stopped");
-				ctx.ui.notify(`LoopX auto-loop stop (${q.decision || "should_run=false"}): ${q.reason}`.slice(0, 300), "info");
+				ctx.ui.notify(
+					`LoopX auto-loop stop (${q.decision || "should_run=false"}): ${q.reason}`.slice(0, 300),
+					"info",
+				);
 				return;
 			}
 

@@ -5,6 +5,9 @@
  * createAgentSession() options. The SDK does the heavy lifting.
  */
 
+import { spawnSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { type ImageContent, modelsAreEqual } from "@earendil-works/pi-ai";
 import chalk from "chalk";
@@ -566,6 +569,33 @@ export interface MainOptions {
 	extensionFactories?: InlineExtension[];
 }
 
+/**
+ * DromX first-run extension bootstrap.
+ *
+ * When installed as an npm tarball (`npm i -g dromx-code-*.tgz`), npm does not run
+ * the package's own postinstall for a top-level global install, so the bundled
+ * extensions (auto-loop, webbridge, web search, diagnostics, memory, ...) are never
+ * registered. This runs the packaged postinstall.mjs exactly once, on the first
+ * normal launch, then drops a marker so it never runs again.
+ *
+ * Guarded hard: only when postinstall.mjs is actually bundled (tarball installs,
+ * not source checkouts), and only once (marker file). The marker is written even
+ * on failure so we never loop; users can re-run extensions manually if needed.
+ */
+function maybeBootstrapExtensions(agentDir: string): void {
+	try {
+		const marker = join(agentDir, ".dromx-extensions-bootstrapped");
+		if (existsSync(marker)) return;
+		const postinstall = join(getPackageDir(), "postinstall.mjs");
+		if (!existsSync(postinstall)) return; // source checkout / not a packaged tarball — nothing to do
+		console.log(chalk.dim("DromX: first run — registering bundled extensions (one time)..."));
+		spawnSync(process.execPath, [postinstall], { stdio: "inherit", timeout: 300_000 });
+		writeFileSync(marker, `${new Date().toISOString()}\n`);
+	} catch {
+		// never block startup on bootstrap trouble
+	}
+}
+
 export async function main(args: string[], options?: MainOptions) {
 	resetTimings();
 	const extensionFactories = [...builtInExtensions, ...(options?.extensionFactories ?? [])];
@@ -585,6 +615,22 @@ export async function main(args: string[], options?: MainOptions) {
 
 	const cwd = process.cwd();
 	const agentDir = getAgentDir();
+
+	// First-run only: register bundled extensions if this is a packaged tarball install.
+	// Skip for package/config subcommands (install/remove/update/config/list) so the
+	// postinstall's own `dromx install` calls never re-enter this path.
+	const firstArg = args[0];
+	const isPackageSubcommand =
+		firstArg === "install" ||
+		firstArg === "remove" ||
+		firstArg === "uninstall" ||
+		firstArg === "update" ||
+		firstArg === "list" ||
+		firstArg === "config";
+	if (!isPackageSubcommand) {
+		maybeBootstrapExtensions(agentDir);
+	}
+
 	const bootstrapSettingsManager = SettingsManager.create(cwd, agentDir, { projectTrusted: false });
 	applyHttpProxySettings(bootstrapSettingsManager.getGlobalSettings().httpProxy);
 	configureHttpDispatcher();
