@@ -159,9 +159,10 @@ function loopxInstalled(): boolean {
 	return !r.error;
 }
 
-/** Find a usable python that has pip, preferring newer. Returns the python command or undefined. */
+/** Find a usable python that has pip. Returns the python command, or undefined. */
 function findPython(): string | undefined {
-	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python"]) {
+	// Order covers macOS/Linux (python3.x, python3) and Windows (py launcher, python).
+	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python", "py"]) {
 		const r = spawnSync(c, ["-c", "import sys,pip;print(sys.version_info[0])"], {
 			encoding: "utf-8",
 			timeout: 8_000,
@@ -192,7 +193,7 @@ async function ensureLoopxInstalled(ctx: {
 
 	const ok = await ctx.ui.confirm(
 		"Install loopx?",
-		`Auto-loop needs the loopx engine (a Python package). Install it now with '${py} -m pip install --user loopx'?`,
+		"Auto-loop needs the loopx engine (a Python package). Install it now? (equivalent to: pip install --user loopx)",
 	);
 	if (!ok) {
 		ctx.ui.notify("Skipped. Install later with: pip install loopx", "info");
@@ -206,7 +207,7 @@ async function ensureLoopxInstalled(ctx: {
 	});
 	if (r.error || r.status !== 0) {
 		ctx.ui.notify(
-			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install manually: ${py} -m pip install loopx`,
+			`loopx install failed (${r.error?.message ?? `exit ${r.status}`}). Install it manually: pip install loopx`,
 			"error",
 		);
 		return false;

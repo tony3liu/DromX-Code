@@ -5,8 +5,8 @@
 # What it does:
 #   1. checks node >=22.19
 #   2. if loopx not installed: checks python >=3.11, then installs loopx
-#   3. installs pi extensions: mcp-adapter, hashline-edit, web-access, lens,
-#      hermes-memory (via npm); subagents, messenger, intercom (via git w/ mirror fallback)
+#   3. installs pi extensions (all via npm): mcp-adapter, hashline-edit, web-access,
+#      lens, hermes-memory, subagents, messenger, intercom
 #   4. copies the built-in permission-gate + plan-mode examples
 #   4b. installs the Kimi WebBridge daemon + skill + autostart extension (real-browser control; --no-webbridge to skip)
 #   5. registers the pi-loopx extension (6 tools + auto-continue + autonomous-start) in settings.json
@@ -121,9 +121,9 @@ install_npm "npm:pi-hashline-edit"
 install_npm "npm:pi-web-access"
 install_npm "npm:pi-lens"
 install_npm "npm:pi-hermes-memory"
-install_git "git:github.com/nicobailon/pi-subagents" "nicobailon/pi-subagents"
-install_git "git:github.com/nicobailon/pi-messenger" "nicobailon/pi-messenger"
-install_git "git:github.com/nicobailon/pi-intercom" "nicobailon/pi-intercom"
+install_npm "npm:pi-subagents"
+install_npm "npm:pi-messenger"
+install_npm "npm:pi-intercom"
 
 # --- 4. built-in examples --------------------------------------------------
 say "copying built-in extensions (permission-gate, plan-mode)..."

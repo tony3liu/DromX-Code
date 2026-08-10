@@ -91,9 +91,9 @@ const EXT_SOURCES = [
 	"npm:pi-web-access",
 	"npm:pi-lens",
 	"npm:pi-hermes-memory",
-	"git:github.com/nicobailon/pi-subagents",
-	"git:github.com/nicobailon/pi-messenger",
-	"git:github.com/nicobailon/pi-intercom",
+	"npm:pi-subagents",
+	"npm:pi-messenger",
+	"npm:pi-intercom",
 ];
 writeFileSync(
 	join(codeDir, "postinstall.mjs"),
