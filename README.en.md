@@ -50,6 +50,15 @@ cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
 
+### Uninstall
+
+```bash
+dromx uninstall --all        # interactive — confirms each part (config / WebBridge / loopx / aliases)
+dromx uninstall --all --yes  # remove everything without prompting
+```
+
+Remove a single extension: `dromx remove npm:pi-lens`.
+
 ## Use it
 
 ```bash

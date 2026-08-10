@@ -50,6 +50,15 @@ cd DromX-Code
 bash scripts/setup-dromx.sh
 ```
 
+### 卸载
+
+```bash
+dromx uninstall --all        # 交互式，逐项确认（配置 / WebBridge / loopx / 别名）
+dromx uninstall --all --yes  # 全部删除，不询问
+```
+
+卸单个扩展：`dromx remove npm:pi-lens`。
+
 ## 使用
 
 ```bash

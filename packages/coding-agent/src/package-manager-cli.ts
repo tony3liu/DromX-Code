@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Markdown, type MarkdownTheme } from "@earendil-works/pi-tui";
 import chalk from "chalk";
@@ -675,10 +677,50 @@ export async function handleConfigCommand(
 	process.exit(0);
 }
 
+/**
+ * `dromx uninstall --all` — run the full uninstaller (extensions, config, WebBridge
+ * daemon, loopx, aliases). Delegates to the bundled uninstall-dromx.sh so the
+ * destructive, interactive logic lives in one auditable place. Returns true if handled.
+ */
+function handleUninstallAll(args: string[]): boolean {
+	if (args[0] !== "uninstall" || !args.includes("--all")) return false;
+
+	const script = join(getPackageDir(), "uninstall-dromx.sh");
+	if (!existsSync(script)) {
+		// Source checkout may keep it at scripts/uninstall-dromx.sh; try repo layout too.
+		const repoScript = join(getPackageDir(), "..", "..", "scripts", "uninstall-dromx.sh");
+		const chosen = existsSync(repoScript) ? repoScript : undefined;
+		if (!chosen) {
+			console.error(chalk.red("uninstall-dromx.sh not found."));
+			console.error(
+				chalk.dim(
+					"Manual uninstall: npm rm -g dromx-code ; rm -rf ~/.pi ; ~/.kimi-webbridge/bin/kimi-webbridge uninstall ; pip uninstall loopx",
+				),
+			);
+			process.exitCode = 1;
+			return true;
+		}
+		const yes = args.includes("--yes") || args.includes("-y");
+		const r = spawnSync("bash", [chosen, ...(yes ? ["--yes"] : [])], { stdio: "inherit" });
+		process.exitCode = r.status ?? 0;
+		return true;
+	}
+
+	const yes = args.includes("--yes") || args.includes("-y");
+	const r = spawnSync("bash", [script, ...(yes ? ["--yes"] : [])], { stdio: "inherit" });
+	process.exitCode = r.status ?? 0;
+	return true;
+}
+
 export async function handlePackageCommand(
 	args: string[],
 	runtimeOptions: PackageCommandRuntimeOptions = {},
 ): Promise<boolean> {
+	// `dromx uninstall --all` runs the full uninstaller (not a single-extension remove).
+	if (handleUninstallAll(args)) {
+		return true;
+	}
+
 	const options = parsePackageCommand(args);
 	if (!options) {
 		return false;

@@ -52,6 +52,8 @@ mkdirSync(codeDir, { recursive: true });
 copyTree(join(CA, "dist"), join(codeDir, "dist"));
 copyTree(join(CA, "examples"), join(codeDir, "examples")); // includes extensions/loopx (bundled) + other samples
 copyTree(join(CA, "docs"), join(codeDir, "docs"));
+// Bundle the uninstaller so `dromx uninstall --all` can find it at the package root.
+cpSync(join(REPO, "scripts", "uninstall-dromx.sh"), join(codeDir, "uninstall-dromx.sh"));
 if (existsSync(join(CA, "npm-shrinkwrap.json"))) {
 	cpSync(join(CA, "npm-shrinkwrap.json"), join(codeDir, "npm-shrinkwrap.json"));
 }
@@ -71,7 +73,7 @@ writePkg(codeDir, {
 		// aborts the install). npm packages need network; the bundled loopx/webbridge don't.
 		postinstall: "node postinstall.mjs || true",
 	},
-	files: ["dist", "examples", "docs", "postinstall.mjs", "CHANGELOG.md", "npm-shrinkwrap.json"],
+	files: ["dist", "examples", "docs", "postinstall.mjs", "uninstall-dromx.sh", "CHANGELOG.md", "npm-shrinkwrap.json"],
 	piConfig: { name: "dromx", configDir: ".pi" },
 	engines: caPkg.engines ?? { node: ">=22.19.0" },
 	dependencies: caPkg.dependencies,
