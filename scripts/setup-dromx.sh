@@ -75,7 +75,8 @@ else
     :
   else
     warn "official installer failed (see /tmp/loopx-install.log); falling back to pip --user with $PY"
-    "$PY" -m pip install --user --quiet git+https://github.com/huangruiteng/loopx.git 2>&1 | tail -3 || true
+    # --no-build-isolation: loopx pins setuptools==83.0.0 (not on PyPI); use the env's setuptools.
+    "$PY" -m pip install --user --quiet --no-build-isolation git+https://github.com/huangruiteng/loopx.git 2>&1 | tail -3 || true
   fi
   # make sure the user bin dir is on PATH for this session
   USER_BIN="$("$PY" -c 'import site,os;print(os.path.join(site.getuserbase(),"bin"))' 2>/dev/null || echo "$HOME/.local/bin")"

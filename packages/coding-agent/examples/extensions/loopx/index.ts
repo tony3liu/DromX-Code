@@ -186,7 +186,7 @@ async function ensureLoopxInstalled(ctx: {
 }): Promise<boolean> {
 	if (loopxInstalled()) return true;
 
-	const manual = `pip install ${LOOPX_PIP_SPEC}`;
+	const manual = `pip install --no-build-isolation ${LOOPX_PIP_SPEC}`;
 	const py = findPython();
 	if (!py) {
 		ctx.ui.notify(
@@ -206,7 +206,9 @@ async function ensureLoopxInstalled(ctx: {
 	}
 
 	ctx.ui.notify("Installing loopx from GitHub (pip)... this may take a moment.", "info");
-	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", LOOPX_PIP_SPEC], {
+	// --no-build-isolation: loopx's pyproject pins setuptools==83.0.0 (not on PyPI),
+	// so build isolation fails; use the environment's existing setuptools instead.
+	const r = spawnSync(py, ["-m", "pip", "install", "--user", "--quiet", "--no-build-isolation", LOOPX_PIP_SPEC], {
 		encoding: "utf-8",
 		timeout: 180_000,
 	});
