@@ -53,7 +53,7 @@ interface RunResult {
 function runLoopx(args: string[], cwd: string, timeoutMs = 60_000): RunResult {
 	const reg = registryPath(cwd);
 	const fullArgs = existsSync(reg) ? ["--registry", reg, ...args] : args;
-	const res = spawnSync(LOOPX_BIN, fullArgs, {
+	const res = spawnSync(loopxBin, fullArgs, {
 		cwd,
 		encoding: "utf-8",
 		timeout: timeoutMs,
@@ -156,10 +156,47 @@ function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
 	return v === "1" || v === "true" || v === "yes";
 }
 
-/** Is the `loopx` CLI on PATH? */
-function loopxInstalled(): boolean {
-	const r = spawnSync(LOOPX_BIN, ["--version"], { encoding: "utf-8", timeout: 8_000 });
-	return !r.error;
+/** The loopx executable to invoke. Starts as bare "loopx" (PATH); resolveLoopxBin()
+ *  may replace it with an absolute path when loopx is installed to a Python user
+ *  bin dir that isn't on PATH (common on Windows with `pip install --user`). */
+let loopxBin = LOOPX_BIN;
+
+/** Can we run this loopx binary? */
+function canRun(bin: string): boolean {
+	const r = spawnSync(bin, ["--version"], { encoding: "utf-8", timeout: 8_000 });
+	return !r.error && r.status === 0;
+}
+
+/**
+ * Locate the loopx executable even if it isn't on PATH. Checks PATH first, then the
+ * user-site bin/Scripts dir of each candidate python (where `pip install --user`
+ * puts console scripts). Caches the result in loopxBin. Returns true if found.
+ */
+function resolveLoopxBin(): boolean {
+	if (canRun(loopxBin)) return true;
+	if (loopxBin !== LOOPX_BIN && canRun(LOOPX_BIN)) {
+		loopxBin = LOOPX_BIN;
+		return true;
+	}
+	const exeNames = process.platform === "win32" ? ["loopx.exe", "loopx"] : ["loopx"];
+	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python", "py"]) {
+		const r = spawnSync(c, ["-c", "import site;print(site.getuserbase())"], {
+			encoding: "utf-8",
+			timeout: 8_000,
+		});
+		if (r.error || r.status !== 0) continue;
+		const userBase = r.stdout.trim();
+		if (!userBase) continue;
+		const binDir = process.platform === "win32" ? join(userBase, "Scripts") : join(userBase, "bin");
+		for (const name of exeNames) {
+			const candidate = join(binDir, name);
+			if (existsSync(candidate) && canRun(candidate)) {
+				loopxBin = candidate;
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 /** Find a usable python that has pip. Returns the python command, or undefined. */
@@ -185,7 +222,7 @@ function findPython(): string | undefined {
 async function ensureLoopxInstalled(ctx: {
 	ui: { confirm(t: string, m: string): Promise<boolean>; notify(m: string, level?: string): void };
 }): Promise<boolean> {
-	if (loopxInstalled()) return true;
+	if (resolveLoopxBin()) return true;
 
 	const manual = `pip install --no-build-isolation ${LOOPX_PIP_SPEC}`;
 	const py = findPython();
@@ -252,14 +289,15 @@ async function ensureLoopxInstalled(ctx: {
 		ctx.ui.notify(`loopx install failed: ${reason}.\nFull log: ${logPath}\nManual: ${manual}`, "error");
 		return false;
 	}
-	if (!loopxInstalled()) {
+	// loopx installed — locate its executable (may be in a user bin dir not on PATH).
+	if (!resolveLoopxBin()) {
 		ctx.ui.notify(
-			"loopx installed, but the `loopx` command isn't on PATH yet. Add your Python user bin dir to PATH (or restart the shell), then retry.",
+			`loopx installed but its executable wasn't found. It may be in a Python user bin dir not on PATH. See log: ${logPath}`,
 			"warning",
 		);
 		return false;
 	}
-	ctx.ui.notify("loopx installed ✓", "info");
+	ctx.ui.notify(`loopx installed ✓ (${loopxBin})`, "info");
 	return true;
 }
 
@@ -561,6 +599,8 @@ export default function loopxExtension(pi: ExtensionAPI) {
 		autoLoopOn = false; // fresh session: don't inherit a stale toggle
 		// re-read env cap for the new session (a /auto-loop --max-turns can still override mid-session)
 		maxAutoTurns = Number(process.env.LOOPX_MAX_TURNS ?? 25);
+		// Locate the loopx executable up front (may live in a Python user bin dir not on PATH).
+		resolveLoopxBin();
 		try {
 			const cwd = ctx?.cwd ?? process.cwd();
 			// Ensure .gitignore ignores dromx local state (.pi/ .loopx/ .codex/) — create if missing, append if absent.
