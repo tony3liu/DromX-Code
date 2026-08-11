@@ -160,6 +160,9 @@ function autoContinueEnabledAtLaunch(pi: ExtensionAPI): boolean {
  *  may replace it with an absolute path when loopx is installed to a Python user
  *  bin dir that isn't on PATH (common on Windows with `pip install --user`). */
 let loopxBin = LOOPX_BIN;
+// Set once we've tried (and failed) to auto-install loopx this process, so repeated
+// /auto-loop invocations don't re-run pip every time. Reset only by restarting dromx.
+let loopxInstallFailed = false;
 
 /** Can we run this loopx binary? */
 function canRun(bin: string): boolean {
@@ -167,10 +170,36 @@ function canRun(bin: string): boolean {
 	return !r.error && r.status === 0;
 }
 
+// Python snippet that prints every plausible directory a loopx console script could
+// land in — user-scheme scripts dir, getuserbase bin/Scripts, and the scripts dir
+// derived from where the loopx package is actually installed. One per line.
+const PY_SCRIPT_DIRS = [
+	"import os,site,sysconfig",
+	"ds=[]",
+	// user-scheme scripts dir (where `pip install --user` puts console scripts)
+	"try:",
+	"  ds.append(sysconfig.get_path('scripts', sysconfig.get_preferred_scheme('user')))",
+	"except Exception: pass",
+	"try:",
+	"  ds.append(sysconfig.get_path('scripts'))",
+	"except Exception: pass",
+	"ub=site.getuserbase()",
+	"ds+=[os.path.join(ub,'Scripts'),os.path.join(ub,'bin')]",
+	// scripts dir next to the loopx package install location
+	"try:",
+	"  import importlib.util as u; s=u.find_spec('loopx')",
+	"  if s and s.origin:",
+	"    base=os.path.dirname(os.path.dirname(os.path.dirname(s.origin)))",
+	"    ds+=[os.path.join(base,'Scripts'),os.path.join(base,'bin'),base]",
+	"except Exception: pass",
+	"[print(d) for d in ds if d]",
+].join("\n");
+
 /**
- * Locate the loopx executable even if it isn't on PATH. Checks PATH first, then the
- * user-site bin/Scripts dir of each candidate python (where `pip install --user`
- * puts console scripts). Caches the result in loopxBin. Returns true if found.
+ * Locate the loopx executable even if it isn't on PATH. Checks PATH first, then asks
+ * each candidate python for every plausible scripts dir (`pip install --user` puts
+ * console scripts in a user-scheme Scripts/bin dir that isn't on PATH, esp. on
+ * Windows / uv-managed pythons). Caches the found absolute path in loopxBin.
  */
 function resolveLoopxBin(): boolean {
 	if (canRun(loopxBin)) return true;
@@ -180,19 +209,16 @@ function resolveLoopxBin(): boolean {
 	}
 	const exeNames = process.platform === "win32" ? ["loopx.exe", "loopx"] : ["loopx"];
 	for (const c of ["python3.13", "python3.12", "python3.11", "python3", "python", "py"]) {
-		const r = spawnSync(c, ["-c", "import site;print(site.getuserbase())"], {
-			encoding: "utf-8",
-			timeout: 8_000,
-		});
-		if (r.error || r.status !== 0) continue;
-		const userBase = r.stdout.trim();
-		if (!userBase) continue;
-		const binDir = process.platform === "win32" ? join(userBase, "Scripts") : join(userBase, "bin");
-		for (const name of exeNames) {
-			const candidate = join(binDir, name);
-			if (existsSync(candidate) && canRun(candidate)) {
-				loopxBin = candidate;
-				return true;
+		const r = spawnSync(c, ["-c", PY_SCRIPT_DIRS], { encoding: "utf-8", timeout: 8_000 });
+		if (r.error || r.status !== 0 || !r.stdout) continue;
+		for (const dir of r.stdout.split(/\r?\n/).map((d) => d.trim())) {
+			if (!dir) continue;
+			for (const name of exeNames) {
+				const candidate = join(dir, name);
+				if (existsSync(candidate) && canRun(candidate)) {
+					loopxBin = candidate;
+					return true;
+				}
 			}
 		}
 	}
@@ -225,8 +251,14 @@ async function ensureLoopxInstalled(ctx: {
 	if (resolveLoopxBin()) return true;
 
 	const manual = `pip install --no-build-isolation ${LOOPX_PIP_SPEC}`;
+	// Don't re-run pip on every /auto-loop if a prior attempt this session already failed.
+	if (loopxInstallFailed) {
+		ctx.ui.notify(`loopx isn't available. Install it manually, then retry: ${manual}`, "warning");
+		return false;
+	}
 	const py = findPython();
 	if (!py) {
+		loopxInstallFailed = true;
 		ctx.ui.notify(
 			`auto-loop needs loopx, but no Python 3 with pip was found. Install Python 3.11+, then: ${manual}`,
 			"warning",
@@ -287,6 +319,7 @@ async function ensureLoopxInstalled(ctx: {
 			? "pip built 'UNKNOWN-0.0.0' instead of loopx (setuptools too old to read loopx's pyproject)"
 			: (r.error?.message ?? `exit ${r.status}`);
 		ctx.ui.notify(`loopx install failed: ${reason}.\nFull log: ${logPath}\nManual: ${manual}`, "error");
+		loopxInstallFailed = true;
 		return false;
 	}
 	// loopx installed — locate its executable (may be in a user bin dir not on PATH).
@@ -295,6 +328,7 @@ async function ensureLoopxInstalled(ctx: {
 			`loopx installed but its executable wasn't found. It may be in a Python user bin dir not on PATH. See log: ${logPath}`,
 			"warning",
 		);
+		loopxInstallFailed = true;
 		return false;
 	}
 	ctx.ui.notify(`loopx installed ✓ (${loopxBin})`, "info");
