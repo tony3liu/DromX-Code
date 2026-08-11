@@ -31,7 +31,12 @@ import { homedir, platform } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const DAEMON_BIN = join(homedir(), ".kimi-webbridge", "bin", platform() === "win32" ? "kimi-webbridge.exe" : "kimi-webbridge");
+const DAEMON_BIN = join(
+	homedir(),
+	".kimi-webbridge",
+	"bin",
+	platform() === "win32" ? "kimi-webbridge.exe" : "kimi-webbridge",
+);
 const CLEAN_PROFILE = join(homedir(), ".dromx-chrome");
 const EXTENSION_URL = "https://www.kimi.com/features/webbridge";
 const INSTALL_CMD =
@@ -55,6 +60,33 @@ function daemonStatus(): Status {
 	} catch {
 		return { installed: true, running: false, extensionConnected: false };
 	}
+}
+
+/**
+ * Download + install the Kimi WebBridge daemon via the official installer
+ * (--no-start --no-skill; dromx controls start/skill). Returns true if the daemon
+ * binary is present afterward. Best-effort; on failure the caller shows the manual command.
+ */
+function installDaemon(): boolean {
+	const cmd =
+		platform() === "win32"
+			? [
+					"powershell",
+					[
+						"-NoProfile",
+						"-Command",
+						'iex "& { $(irm https://kimi-web-img.moonshot.cn/webbridge/install.ps1) } -NoStart -NoSkill"',
+					],
+				]
+			: [
+					"bash",
+					[
+						"-c",
+						"curl -fsSL https://kimi-web-img.moonshot.cn/webbridge/install.sh | bash -s -- --no-start --no-skill",
+					],
+				];
+	spawnSync(cmd[0] as string, cmd[1] as string[], { stdio: "ignore", timeout: 300_000 });
+	return existsSync(DAEMON_BIN);
 }
 
 function findChrome(): string | undefined {
@@ -112,26 +144,40 @@ export default function webbridgeExtension(pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			const sub = (typeof args === "string" ? args : "").trim().toLowerCase();
 
-			// --- daemon not installed: tell the user how ---
-			const s0 = daemonStatus();
-			if (!s0.installed) {
-				ctx.ui.notify(
-					`Kimi WebBridge daemon not installed. Install it:\n  ${INSTALL_CMD}\nThen install the Chrome extension: ${EXTENSION_URL}`,
-					"warning",
-				);
-				ctx.ui.setStatus("webbridge", footerLabel(s0));
-				return;
-			}
-
-			// --- status subcommand: report only ---
+			// --- status subcommand: report only, never install ---
 			if (sub === "status") {
 				const s = daemonStatus();
 				ctx.ui.setStatus("webbridge", footerLabel(s));
 				ctx.ui.notify(
-					`Kimi WebBridge — daemon: ${s.running ? "running" : "stopped"}, extension: ${s.extensionConnected ? "connected" : "not connected"}.`,
+					`Kimi WebBridge — daemon: ${s.installed ? (s.running ? "running" : "installed (stopped)") : "not installed"}, extension: ${s.extensionConnected ? "connected" : "not connected"}.`,
 					"info",
 				);
 				return;
+			}
+
+			// --- daemon not installed: offer to auto-install ---
+			let s0 = daemonStatus();
+			if (!s0.installed) {
+				const ok = await ctx.ui.confirm(
+					"Install WebBridge daemon?",
+					`Real-browser control needs the Kimi WebBridge daemon. Download and install it now? (equivalent to: ${INSTALL_CMD})`,
+				);
+				if (!ok) {
+					ctx.ui.notify(`Skipped. Install later with: ${INSTALL_CMD}`, "info");
+					ctx.ui.setStatus("webbridge", footerLabel(s0));
+					return;
+				}
+				ctx.ui.notify("Installing WebBridge daemon... this may take a moment.", "info");
+				if (!installDaemon()) {
+					ctx.ui.notify(
+						`WebBridge daemon install failed. Install it manually:\n  ${INSTALL_CMD}\nThen install the extension: ${EXTENSION_URL}`,
+						"error",
+					);
+					ctx.ui.setStatus("webbridge", footerLabel(daemonStatus()));
+					return;
+				}
+				ctx.ui.notify("WebBridge daemon installed ✓", "info");
+				s0 = daemonStatus();
 			}
 
 			// --- enable: ensure daemon up ---
