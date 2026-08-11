@@ -31,7 +31,7 @@ import { homedir, platform } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const DAEMON_BIN = join(homedir(), ".kimi-webbridge", "bin", "kimi-webbridge");
+const DAEMON_BIN = join(homedir(), ".kimi-webbridge", "bin", platform() === "win32" ? "kimi-webbridge.exe" : "kimi-webbridge");
 const CLEAN_PROFILE = join(homedir(), ".dromx-chrome");
 const EXTENSION_URL = "https://www.kimi.com/features/webbridge";
 const INSTALL_CMD =
